@@ -1,0 +1,137 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-sans);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Brand palette — context/design-system.md */
+  --color-teal-500: var(--teal-500);
+  --color-teal-600: var(--teal-600);
+  --color-teal-700: var(--teal-700);
+  --color-teal-100: var(--teal-100);
+  --color-coral-500: var(--coral-500);
+  --color-coral-100: var(--coral-100);
+  --color-mint-500: var(--mint-500);
+  --color-mint-100: var(--mint-100);
+  --color-peach-100: var(--peach-100);
+  --color-peach-700: var(--peach-700);
+  --color-orange-500: var(--orange-500);
+  --color-blue-100: var(--blue-100);
+  --color-blue-700: var(--blue-700);
+  --color-ink-900: var(--ink-900);
+  --color-ink-600: var(--ink-600);
+  --color-ink-400: var(--ink-400);
+  --color-surface-0: var(--surface-0);
+  --color-surface-100: var(--surface-100);
+
+  /* Legacy aliases → teal (older class names keep working) */
+  --color-violet-500: var(--teal-500);
+  --color-violet-600: var(--teal-600);
+  --color-violet-700: var(--teal-700);
+  --color-violet-100: var(--teal-100);
+  --color-pink-500: var(--teal-500);
+  --color-pink-100: var(--teal-100);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-pill: var(--radius-pill);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-hover: var(--shadow-hover);
+}
+
+:root {
+  /* Brand palette — context/design-system.md */
+  --teal-600: #00a389;
+  --teal-700: #008f78;
+  --teal-500: #2eb6a1;
+  --teal-100: #e6f7f4;
+  --coral-500: #f14c4c;
+  --coral-100: #fde7e7;
+  --mint-500: #3bb273;
+  --mint-100: #e1f6e9;
+  --peach-100: #fdeedc;
+  --peach-700: #b8620a;
+  --orange-500: #f5a524;
+  --blue-100: #e8f1fb;
+  --blue-700: #2f6fed;
+  --ink-900: #1e1b2e;
+  --ink-600: #5a5770;
+  --ink-400: #9a97ac;
+  --surface-0: #ffffff;
+  --surface-100: #f4f7f6;
+  --border: #e5e9e8;
+
+  /* Legacy aliases */
+  --violet-600: var(--teal-600);
+  --violet-700: var(--teal-700);
+  --violet-500: var(--teal-500);
+  --violet-100: var(--teal-100);
+  --pink-500: var(--teal-500);
+  --pink-100: var(--teal-100);
+
+  /* shadcn semantic slots */
+  --background: var(--surface-100);
+  --foreground: var(--ink-900);
+  --card: var(--surface-0);
+  --card-foreground: var(--ink-900);
+  --popover: var(--surface-0);
+  --popover-foreground: var(--ink-900);
+  --primary: var(--teal-600);
+  --primary-foreground: #ffffff;
+  --secondary: var(--teal-100);
+  --secondary-foreground: var(--teal-700);
+  --muted: var(--surface-100);
+  --muted-foreground: var(--ink-400);
+  --accent: var(--teal-100);
+  --accent-foreground: var(--ink-900);
+  --destructive: var(--coral-500);
+  --destructive-foreground: #ffffff;
+  --input: var(--border);
+  --ring: var(--teal-500);
+
+  --font-sans: "Segoe UI", var(--font-inter), -apple-system, sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --shadow-card: 0 1px 3px rgba(30, 27, 46, 0.06),
+    0 4px 16px rgba(30, 27, 46, 0.04);
+  --shadow-hover: 0 8px 24px rgba(30, 27, 46, 0.1);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

@@ -1,0 +1,398 @@
+"use client";
+
+import { useState, type ChangeEvent, type SubmitEvent } from "react";
+import { ImagePlus, Plus, Save, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import type { Product } from "@/generated/prisma/client";
+
+type ProductFormValues = {
+  name: string;
+  description: string;
+  priceBirr: string;
+  commissionBirr: string;
+  imageUrls: string[];
+};
+
+function toFormValues(product?: Product): ProductFormValues {
+  return {
+    name: product?.name ?? "",
+    description: product?.description ?? "",
+    priceBirr: product ? String(product.priceBirr) : "",
+    commissionBirr: product ? String(product.commissionBirr) : "",
+    imageUrls: product?.imageUrls ?? [],
+  };
+}
+
+async function uploadImage(file: File): Promise<string> {
+  const sigResponse = await fetch("/api/admin/uploads/signature", {
+    method: "POST",
+  });
+  if (!sigResponse.ok) {
+    throw new Error("Could not get an upload signature");
+  }
+  const { data: sig } = await sigResponse.json();
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("api_key", sig.apiKey);
+  formData.append("timestamp", String(sig.timestamp));
+  formData.append("signature", sig.signature);
+  formData.append("folder", sig.folder);
+
+  const uploadResponse = await fetch(
+    `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
+    { method: "POST", body: formData },
+  );
+  const uploaded = await uploadResponse.json();
+  if (!uploadResponse.ok) {
+    throw new Error(uploaded?.error?.message ?? "Image upload failed");
+  }
+  return uploaded.secure_url as string;
+}
+
+function FormCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-[10px] border border-border bg-card shadow-card">
+      <header className="border-b border-border px-5 py-3.5">
+        <h2 className="text-[15px] font-bold text-foreground">{title}</h2>
+      </header>
+      <div className="flex flex-col gap-4 p-5">{children}</div>
+    </section>
+  );
+}
+
+export function ProductForm({
+  product,
+  onSuccess,
+  onCancel,
+}: {
+  product?: Product;
+  onSuccess: () => void;
+  onCancel?: () => void;
+}) {
+  const [values, setValues] = useState<ProductFormValues>(
+    toFormValues(product),
+  );
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const url = await uploadImage(file);
+      setValues((v) => ({ ...v, imageUrls: [...v.imageUrls, url] }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      event.target.value = "";
+    }
+  }
+
+  function removeImage(url: string) {
+    setValues((v) => ({
+      ...v,
+      imageUrls: v.imageUrls.filter((item) => item !== url),
+    }));
+  }
+
+  async function handleSubmit(event: SubmitEvent) {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const body = {
+        name: values.name,
+        description: values.description || undefined,
+        priceBirr: Number(values.priceBirr),
+        commissionBirr: Number(values.commissionBirr),
+        imageUrls: values.imageUrls,
+      };
+      const response = await fetch(
+        product ? `/api/admin/products/${product.id}` : "/api/admin/products",
+        {
+          method: product ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(
+          errorBody?.error?.message ?? "Could not save the product",
+        );
+      }
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6 pb-20">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.35fr_1fr]">
+        <FormCard title="Name and Description">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="name" className="text-ink-600">
+              Product Name
+            </Label>
+            <Input
+              id="name"
+              required
+              className="h-10 rounded-[8px]"
+              value={values.name}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, name: e.target.value }))
+              }
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="description" className="text-ink-600">
+              Product Description
+            </Label>
+            <textarea
+              id="description"
+              rows={8}
+              className="w-full rounded-[8px] border border-input bg-transparent px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              value={values.description}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, description: e.target.value }))
+              }
+            />
+            <div className="flex flex-wrap items-center gap-2 rounded-[8px] border border-border bg-surface-100 px-2.5 py-1 text-[11px] text-ink-400">
+              <span className="rounded-[6px] border border-border bg-card px-1.5 py-0.5 font-semibold text-ink-600">
+                B
+              </span>
+              <span className="rounded-[6px] border border-border bg-card px-1.5 py-0.5 font-medium italic text-ink-600">
+                I
+              </span>
+              <span className="rounded-[6px] border border-border bg-card px-1.5 py-0.5 font-medium text-ink-600 underline">
+                U
+              </span>
+              <span className="rounded-[6px] border border-border bg-card px-2 py-0.5 text-ink-600">
+                Link
+              </span>
+              <span className="rounded-[6px] border border-border bg-card px-2 py-0.5 text-ink-600">
+                List
+              </span>
+              <span className="ml-auto text-ink-400">
+                Formatting toolbar (preview)
+              </span>
+            </div>
+          </div>
+        </FormCard>
+
+        <div className="flex flex-col gap-5">
+          <FormCard title="Product Details">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-ink-600">Brand Name</Label>
+                <Input className="h-10 rounded-[8px]" disabled value="Adidas" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-ink-600">Product Size</Label>
+                <Input className="h-10 rounded-[8px]" disabled value="Medium" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-ink-600">Product Colors</Label>
+              <Input
+                className="h-10 rounded-[8px]"
+                disabled
+                value="Black and White"
+              />
+            </div>
+          </FormCard>
+
+          <FormCard title="Product Pricing">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="priceBirr" className="text-ink-600">
+                  Price (Birr)
+                </Label>
+                <Input
+                  id="priceBirr"
+                  type="number"
+                  min={1}
+                  required
+                  className="h-10 rounded-[8px]"
+                  value={values.priceBirr}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, priceBirr: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="commissionBirr" className="text-ink-600">
+                  Commission (Birr)
+                </Label>
+                <Input
+                  id="commissionBirr"
+                  type="number"
+                  min={1}
+                  required
+                  className="h-10 rounded-[8px]"
+                  value={values.commissionBirr}
+                  onChange={(e) =>
+                    setValues((v) => ({
+                      ...v,
+                      commissionBirr: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-ink-600">Discount</Label>
+                <Input className="h-10 rounded-[8px]" disabled value="15%" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-ink-600">Minimum Order</Label>
+                <Input className="h-10 rounded-[8px]" disabled value="100" />
+              </div>
+            </div>
+          </FormCard>
+
+          <FormCard title="Product Image">
+            <div className="flex flex-wrap gap-3">
+              <label className="flex h-28 w-28 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[8px] border border-dashed border-teal-500 bg-teal-100/40 text-teal-700 transition-colors hover:bg-teal-100">
+                <ImagePlus className="h-5 w-5" />
+                <span className="px-2 text-center text-[11px] font-medium">
+                  {uploading ? "Uploading…" : "Click to Upload"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  disabled={uploading}
+                />
+              </label>
+              {values.imageUrls.map((url) => (
+                <div
+                  key={url}
+                  className="group relative h-28 w-28 overflow-hidden rounded-[8px] border border-border"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(url)}
+                    className="absolute inset-x-2 bottom-2 inline-flex items-center justify-center gap-1 rounded-[6px] bg-card/95 px-2 py-1 text-[11px] font-medium text-ink-600 opacity-0 shadow-card transition-opacity group-hover:opacity-100"
+                  >
+                    <X className="h-3 w-3" />
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </FormCard>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.35fr_1fr]">
+        <FormCard title="Category">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-ink-600">Product Category</Label>
+            <Input
+              className="h-10 rounded-[8px]"
+              disabled
+              value="Men's Clothes"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-ink-600">Product Sub-Category</Label>
+            <Input
+              className="h-10 rounded-[8px]"
+              disabled
+              value="Men's Tops & T-Shirts"
+            />
+          </div>
+        </FormCard>
+        <FormCard title="Manage Stock">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-ink-600">Stock Keeping Unit</Label>
+            <Input className="h-10 rounded-[8px]" disabled value="SKU-0001" />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-ink-600">Product Stock</Label>
+              <Input className="h-10 rounded-[8px]" disabled value="0" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-ink-600">Minimum Stock</Label>
+              <Input className="h-10 rounded-[8px]" disabled value="0" />
+            </div>
+          </div>
+        </FormCard>
+      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <div className="fixed right-0 bottom-0 left-[260px] z-20 border-t border-border bg-card/95 px-8 py-4 backdrop-blur">
+        <div className="flex flex-wrap justify-end gap-2">
+          {onCancel && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 rounded-[8px] bg-card"
+              onClick={onCancel}
+            >
+              Cancel
+            </Button>
+          )}
+          {product ? (
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={submitting || uploading}
+              className="h-9 rounded-[8px] bg-card"
+            >
+              <Save className="h-4 w-4" />
+              {submitting ? "Saving…" : "Save Product"}
+            </Button>
+          ) : (
+            <>
+              <Button
+                type="submit"
+                variant="outline"
+                disabled={submitting || uploading}
+                className="h-9 rounded-[8px] bg-card"
+              >
+                <Save className="h-4 w-4" />
+                {submitting ? "Saving…" : "Save Product"}
+              </Button>
+              <Button
+                type="submit"
+                disabled={submitting || uploading}
+                className="h-9 rounded-[8px]"
+              >
+                <Plus className="h-4 w-4" />
+                {submitting ? "Saving…" : "Add Product"}
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    </form>
+  );
+}

@@ -1,0 +1,254 @@
+// Affiliate Marketplace — Prisma schema
+// Source of truth for the data model is context/architecture.md
+// and context/project-overview.md. Do not add fields or models
+// that aren't backed by those docs — see context/ai-workflow-rules.md.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------
+// Identity / auth
+//
+// "Creator" and "Admin" (architecture.md's Auth and Access Model)
+// are both realized as a single User model distinguished by
+// `role`, rather than a separate Creator table — NextAuth (Auth.js)
+// needs one core identity model regardless of role, and there is
+// no data a Creator needs that Admin structurally can't also have.
+// Account / Session / VerificationToken follow the standard
+// Auth.js Prisma adapter shape (Google OAuth + email OTP both
+// need these).
+// ---------------------------------------------------------------
+
+enum Role {
+  CREATOR
+  ADMIN
+}
+
+// A creator's chosen destination for their offline commission
+// payout (architecture.md: no payment gateway — admin still pays
+// manually, this just tells admin where to send it). Not a
+// payment-gateway integration.
+enum PayoutMethod {
+  BANK_TRANSFER
+  TELEBIRR
+  CBE_BIRR
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  // Set only by POST /api/auth/sign-up. null for accounts created
+  // via OTP or Google — those sign-in methods stay available
+  // regardless of whether a password is also set.
+  passwordHash  String?
+  role          Role      @default(CREATOR)
+  createdAt     DateTime  @default(now())
+
+  // Payout destination — set by the creator via
+  // PATCH /api/creator/payout-method, read by admin on the
+  // commissions list. payoutBankName only applies to
+  // BANK_TRANSFER; null for TELEBIRR/CBE_BIRR.
+  payoutMethod        PayoutMethod?
+  payoutAccountName   String?
+  payoutAccountNumber String?
+  payoutBankName      String?
+
+  accounts Account[]
+  sessions Session[]
+
+  applications    Application[]
+  affiliateLinks  AffiliateLink[]
+  // Orders reference the creator who gets attribution credit —
+  // named relation to disambiguate from any future buyer/admin
+  // relations on Order.
+  ordersAsCreator Order[]         @relation("OrderCreator")
+  commissions     Commission[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------------------------------------------------------------
+// Catalog
+// ---------------------------------------------------------------
+
+model Product {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  // Whole Birr amounts — no online payment gateway means no
+  // currency-conversion or minor-unit (cents) handling is needed.
+  priceBirr      Int
+  commissionBirr Int
+  imageUrls      String[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  applications   Application[]
+  affiliateLinks AffiliateLink[]
+  orders         Order[]
+}
+
+// ---------------------------------------------------------------
+// Creator applications and affiliate links
+//
+// Approval before link (architecture.md invariant 3): a creator
+// applies to a product, and only on admin approval does an
+// AffiliateLink get created for that creator+product pair — so
+// AffiliateLink has a required 1:1 link back to the Application
+// that authorized it, and is never created standalone.
+// ---------------------------------------------------------------
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Application {
+  id        String            @id @default(cuid())
+  creatorId String
+  creator   User              @relation(fields: [creatorId], references: [id])
+  productId String
+  product   Product           @relation(fields: [productId], references: [id])
+  status    ApplicationStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  decidedAt DateTime?
+
+  affiliateLink AffiliateLink?
+
+  // A creator can only have one application per product — prevents
+  // duplicate/spam re-applications. Not explicitly stated in
+  // architecture.md; a reasonable implementation-level invariant
+  // given links are already unique per creator+product.
+  @@unique([creatorId, productId])
+}
+
+model AffiliateLink {
+  id            String      @id @default(cuid())
+  // Unique public token used in the shareable URL
+  // (e.g. /p/[productId]?ref=slug). architecture.md doesn't name
+  // this field; it's the minimum needed for a "unique affiliate
+  // link" to exist as an actual URL.
+  slug          String      @unique @default(cuid())
+  creatorId     String
+  creator       User        @relation(fields: [creatorId], references: [id])
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id])
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id])
+  createdAt     DateTime    @default(now())
+
+  orders Order[]
+
+  @@unique([creatorId, productId])
+}
+
+// ---------------------------------------------------------------
+// Orders and commissions
+// ---------------------------------------------------------------
+
+enum OrderDeliveryStatus {
+  PLACED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  affiliateLinkId String
+  affiliateLink   AffiliateLink @relation(fields: [affiliateLinkId], references: [id])
+  // Denormalized from affiliateLink.creatorId at checkout time and
+  // never updated afterward — architecture.md invariant 5 requires
+  // attribution to be immutable, so it lives directly on the order
+  // rather than only being reachable indirectly through the link.
+  creatorId       String
+  creator         User          @relation("OrderCreator", fields: [creatorId], references: [id])
+
+  // Buyer has no account (architecture.md: "No buyer accounts /
+  // no passwords") but COD delivery of a physical product still
+  // needs contact + delivery details captured at checkout.
+  buyerName    String
+  buyerPhone   String
+  buyerAddress String
+
+  deliveryStatus   OrderDeliveryStatus @default(PLACED)
+  // null until the admin performs the separate "Mark Cash
+  // Reconciled" action (architecture.md Storage Model section).
+  cashReconciledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  commission Commission?
+}
+
+// No NONE status: architecture.md's "Commission status" starts at
+// None, which is realized here as "no Commission row exists yet"
+// rather than a stored enum value — a row is only ever inserted
+// once the order is eligible (Delivered + cash reconciled), which
+// is also the point at which it enters Pending.
+enum CommissionStatus {
+  PENDING
+  PAID
+}
+
+model Commission {
+  id         String           @id @default(cuid())
+  orderId    String           @unique
+  order      Order            @relation(fields: [orderId], references: [id])
+  creatorId  String
+  creator    User             @relation(fields: [creatorId], references: [id])
+  // Snapshotted from product.commissionBirr at creation time so a
+  // later change to a product's commission amount never rewrites
+  // the amount owed on an already-created commission.
+  amountBirr Int
+  status     CommissionStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  paidAt     DateTime?
+}
