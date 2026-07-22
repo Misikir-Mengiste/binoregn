@@ -135,3 +135,13 @@
     @apply font-sans;
   }
 }
+
+/* Mobile product preview bottom-sheet slide-up. */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

@@ -13,6 +13,7 @@ export default async function AdminOrdersPage() {
         buyerPhone: true,
         buyerAddress: true,
         deliveryStatus: true,
+        fulfillmentStatus: true,
         cashReconciledAt: true,
         createdAt: true,
         product: {

@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { TableToolbar } from "@/components/table-toolbar";
@@ -13,7 +13,7 @@ type ApplicationRow = {
   id: string;
   status: string;
   createdAt: Date;
-  creator: { email: string; name: string | null };
+  creator: { id: string; email: string; name: string | null };
   product: { name: string; imageUrls: string[] };
 };
 
@@ -129,20 +129,23 @@ export function ApplicationsClient({
                   </div>
                 </td>
                 <td className="px-5 py-3.5">
-                  <div className="flex items-center gap-2.5">
+                  <Link
+                    href={`/admin/creators/${application.creator.id}`}
+                    className="group flex items-center gap-2.5"
+                  >
                     <InitialsAvatar
                       email={application.creator.email}
                       size="sm"
                     />
                     <div>
-                      <p className="font-semibold text-foreground">
+                      <p className="font-semibold text-foreground group-hover:text-teal-700 group-hover:underline">
                         {application.creator.name ?? application.creator.email}
                       </p>
                       <p className="text-xs text-ink-400">
                         {application.creator.email}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 </td>
                 <td className="px-5 py-3.5 text-ink-600">
                   {new Date(application.createdAt).toLocaleDateString()}
@@ -151,34 +154,35 @@ export function ApplicationsClient({
                   <StatusBadge status={application.status} />
                 </td>
                 <td className="px-5 py-3.5">
-                  {application.status === "PENDING" ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        size="sm"
-                        className="h-8 rounded-[8px]"
-                        disabled={pendingId === application.id}
-                        onClick={() => decide(application.id, "APPROVED")}
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 rounded-[8px] bg-card"
-                        disabled={pendingId === application.id}
-                        onClick={() => decide(application.id, "REJECTED")}
-                      >
-                        Reject
-                      </Button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-border bg-card text-ink-400"
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/admin/creators/${application.creator.id}`}
+                      className="inline-flex h-8 items-center rounded-[8px] border border-border bg-card px-3 text-sm font-medium text-ink-600 hover:text-teal-700"
                     >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
-                  )}
+                      View
+                    </Link>
+                    {application.status === "PENDING" && (
+                      <>
+                        <Button
+                          size="sm"
+                          className="h-8 rounded-[8px]"
+                          disabled={pendingId === application.id}
+                          onClick={() => decide(application.id, "APPROVED")}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 rounded-[8px] bg-card"
+                          disabled={pendingId === application.id}
+                          onClick={() => decide(application.id, "REJECTED")}
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

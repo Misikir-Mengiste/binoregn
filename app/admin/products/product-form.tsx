@@ -7,19 +7,76 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Product } from "@/generated/prisma/client";
 
+type ProductWithExtras = Product & {
+  compareAtBirr?: number | null;
+  rating?: number | null;
+  ratingCount?: number | null;
+  soldCount?: number | null;
+  sellerName?: string | null;
+  sellerVerified?: boolean | null;
+  sellerRating?: number | null;
+  sellerSoldCount?: number | null;
+  shippingDiscountLabel?: string | null;
+  shippingPackageLabel?: string | null;
+  shippingDeliveryTime?: string | null;
+  shippingArrives?: string | null;
+};
+
 type ProductFormValues = {
   name: string;
   description: string;
+  category: string;
+  subCategory: string;
+  features: string;
+  care: string;
+  shipping: string;
+  returns: string;
+  colors: string;
+  sizes: string;
   priceBirr: string;
+  compareAtBirr: string;
+  rating: string;
+  ratingCount: string;
+  soldCount: string;
+  sellerName: string;
+  sellerVerified: boolean;
+  sellerRating: string;
+  sellerSoldCount: string;
+  shippingDiscountLabel: string;
+  shippingPackageLabel: string;
+  shippingDeliveryTime: string;
+  shippingArrives: string;
   commissionBirr: string;
   imageUrls: string[];
 };
 
-function toFormValues(product?: Product): ProductFormValues {
+function toFormValues(product?: ProductWithExtras): ProductFormValues {
   return {
     name: product?.name ?? "",
     description: product?.description ?? "",
+    category: product?.category ?? "",
+    subCategory: product?.subCategory ?? "",
+    features: product?.features?.join("\n") ?? "",
+    care: product?.care?.join("\n") ?? "",
+    shipping: product?.shipping?.join("\n") ?? "",
+    returns: product?.returns?.join("\n") ?? "",
+    colors: product?.colors?.join(", ") ?? "",
+    sizes: product?.sizes?.join(", ") ?? "",
     priceBirr: product ? String(product.priceBirr) : "",
+    compareAtBirr: product?.compareAtBirr ? String(product.compareAtBirr) : "",
+    rating: product?.rating ? String(product.rating) : "",
+    ratingCount: product?.ratingCount ? String(product.ratingCount) : "",
+    soldCount: product?.soldCount ? String(product.soldCount) : "",
+    sellerName: product?.sellerName ?? "",
+    sellerVerified: Boolean(product?.sellerVerified),
+    sellerRating: product?.sellerRating ? String(product.sellerRating) : "",
+    sellerSoldCount: product?.sellerSoldCount
+      ? String(product.sellerSoldCount)
+      : "",
+    shippingDiscountLabel: product?.shippingDiscountLabel ?? "",
+    shippingPackageLabel: product?.shippingPackageLabel ?? "",
+    shippingDeliveryTime: product?.shippingDeliveryTime ?? "",
+    shippingArrives: product?.shippingArrives ?? "",
     commissionBirr: product ? String(product.commissionBirr) : "",
     imageUrls: product?.imageUrls ?? [],
   };
@@ -74,7 +131,7 @@ export function ProductForm({
   onSuccess,
   onCancel,
 }: {
-  product?: Product;
+  product?: ProductWithExtras;
   onSuccess: () => void;
   onCancel?: () => void;
 }) {
@@ -113,10 +170,47 @@ export function ProductForm({
     setError(null);
     setSubmitting(true);
     try {
+      const toList = (value: string) =>
+        value
+          .split(/\r?\n/)
+          .map((item) => item.trim())
+          .filter(Boolean);
+      const toCommaList = (value: string) =>
+        value
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean);
+
       const body = {
         name: values.name,
         description: values.description || undefined,
+        category: values.category || undefined,
+        subCategory: values.subCategory || undefined,
+        features: toList(values.features),
+        care: toList(values.care),
+        shipping: toList(values.shipping),
+        returns: toList(values.returns),
+        colors: toCommaList(values.colors),
+        sizes: toCommaList(values.sizes),
         priceBirr: Number(values.priceBirr),
+        compareAtBirr: values.compareAtBirr
+          ? Number(values.compareAtBirr)
+          : undefined,
+        rating: values.rating ? Number(values.rating) : undefined,
+        ratingCount: values.ratingCount ? Number(values.ratingCount) : undefined,
+        soldCount: values.soldCount ? Number(values.soldCount) : undefined,
+        sellerName: values.sellerName || undefined,
+        sellerVerified: values.sellerVerified,
+        sellerRating: values.sellerRating
+          ? Number(values.sellerRating)
+          : undefined,
+        sellerSoldCount: values.sellerSoldCount
+          ? Number(values.sellerSoldCount)
+          : undefined,
+        shippingDiscountLabel: values.shippingDiscountLabel || undefined,
+        shippingPackageLabel: values.shippingPackageLabel || undefined,
+        shippingDeliveryTime: values.shippingDeliveryTime || undefined,
+        shippingArrives: values.shippingArrives || undefined,
         commissionBirr: Number(values.commissionBirr),
         imageUrls: values.imageUrls,
       };
@@ -200,21 +294,51 @@ export function ProductForm({
           <FormCard title="Product Details">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-ink-600">Brand Name</Label>
-                <Input className="h-10 rounded-[8px]" disabled value="Adidas" />
+                <Label className="text-ink-600">Category</Label>
+                <Input
+                  className="h-10 rounded-[8px]"
+                  placeholder="Accessories"
+                  value={values.category}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, category: e.target.value }))
+                  }
+                />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-ink-600">Product Size</Label>
-                <Input className="h-10 rounded-[8px]" disabled value="Medium" />
+                <Label className="text-ink-600">Sub-category</Label>
+                <Input
+                  className="h-10 rounded-[8px]"
+                  placeholder="Bags"
+                  value={values.subCategory}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, subCategory: e.target.value }))
+                  }
+                />
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-ink-600">Product Colors</Label>
+              <Label className="text-ink-600">Colors</Label>
               <Input
                 className="h-10 rounded-[8px]"
-                disabled
-                value="Black and White"
+                placeholder="Black, White, Olive"
+                value={values.colors}
+                onChange={(e) =>
+                  setValues((v) => ({ ...v, colors: e.target.value }))
+                }
               />
+              <p className="text-xs text-ink-400">Separate colors with commas.</p>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-ink-600">Sizes</Label>
+              <Input
+                className="h-10 rounded-[8px]"
+                placeholder="XS, S, M, L, XL"
+                value={values.sizes}
+                onChange={(e) =>
+                  setValues((v) => ({ ...v, sizes: e.target.value }))
+                }
+              />
+              <p className="text-xs text-ink-400">Separate sizes with commas.</p>
             </div>
           </FormCard>
 
@@ -233,6 +357,22 @@ export function ProductForm({
                   value={values.priceBirr}
                   onChange={(e) =>
                     setValues((v) => ({ ...v, priceBirr: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="compareAtBirr" className="text-ink-600">
+                  Compare at (Birr)
+                </Label>
+                <Input
+                  id="compareAtBirr"
+                  type="number"
+                  min={1}
+                  className="h-10 rounded-[8px]"
+                  placeholder="Optional"
+                  value={values.compareAtBirr}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, compareAtBirr: e.target.value }))
                   }
                 />
               </div>
@@ -256,14 +396,187 @@ export function ProductForm({
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-ink-600">Discount</Label>
-                <Input className="h-10 rounded-[8px]" disabled value="15%" />
+                <Label htmlFor="rating" className="text-ink-600">
+                  Rating (0-5)
+                </Label>
+                <Input
+                  id="rating"
+                  type="number"
+                  step="0.1"
+                  min={0}
+                  max={5}
+                  className="h-10 rounded-[8px]"
+                  placeholder="Optional"
+                  value={values.rating}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, rating: e.target.value }))
+                  }
+                />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-ink-600">Minimum Order</Label>
-                <Input className="h-10 rounded-[8px]" disabled value="100" />
+                <Label htmlFor="ratingCount" className="text-ink-600">
+                  Rating count
+                </Label>
+                <Input
+                  id="ratingCount"
+                  type="number"
+                  min={0}
+                  className="h-10 rounded-[8px]"
+                  placeholder="Optional"
+                  value={values.ratingCount}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, ratingCount: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="soldCount" className="text-ink-600">
+                  Sold count
+                </Label>
+                <Input
+                  id="soldCount"
+                  type="number"
+                  min={0}
+                  className="h-10 rounded-[8px]"
+                  placeholder="Optional"
+                  value={values.soldCount}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, soldCount: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="sellerName" className="text-ink-600">
+                  Seller display name
+                </Label>
+                <Input
+                  id="sellerName"
+                  className="h-10 rounded-[8px]"
+                  placeholder="Binoregn"
+                  value={values.sellerName}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, sellerName: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="sellerRating" className="text-ink-600">
+                  Seller rating
+                </Label>
+                <Input
+                  id="sellerRating"
+                  type="number"
+                  step="0.1"
+                  min={0}
+                  max={5}
+                  className="h-10 rounded-[8px]"
+                  placeholder="4.9"
+                  value={values.sellerRating}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, sellerRating: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="sellerSoldCount" className="text-ink-600">
+                  Seller sold count
+                </Label>
+                <Input
+                  id="sellerSoldCount"
+                  type="number"
+                  min={0}
+                  className="h-10 rounded-[8px]"
+                  placeholder="1000"
+                  value={values.sellerSoldCount}
+                  onChange={(e) =>
+                    setValues((v) => ({
+                      ...v,
+                      sellerSoldCount: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="sellerVerified"
+                  type="checkbox"
+                  checked={values.sellerVerified}
+                  onChange={(e) =>
+                    setValues((v) => ({
+                      ...v,
+                      sellerVerified: e.target.checked,
+                    }))
+                  }
+                  className="h-4 w-4 rounded border-border"
+                />
+                <Label htmlFor="sellerVerified" className="text-ink-600">
+                  Verified seller badge
+                </Label>
+              </div>
+            </div>
+          </FormCard>
+
+          <FormCard title="Shipping highlights">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-ink-600">Discount label</Label>
+                <Input
+                  className="h-10 rounded-[8px]"
+                  placeholder="50% off"
+                  value={values.shippingDiscountLabel}
+                  onChange={(e) =>
+                    setValues((v) => ({
+                      ...v,
+                      shippingDiscountLabel: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-ink-600">Package label</Label>
+                <Input
+                  className="h-10 rounded-[8px]"
+                  placeholder="Regular"
+                  value={values.shippingPackageLabel}
+                  onChange={(e) =>
+                    setValues((v) => ({
+                      ...v,
+                      shippingPackageLabel: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-ink-600">Delivery time</Label>
+                <Input
+                  className="h-10 rounded-[8px]"
+                  placeholder="3-4 working days"
+                  value={values.shippingDeliveryTime}
+                  onChange={(e) =>
+                    setValues((v) => ({
+                      ...v,
+                      shippingDeliveryTime: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-ink-600">Arrives</Label>
+                <Input
+                  className="h-10 rounded-[8px]"
+                  placeholder="8-12 Oct 2026"
+                  value={values.shippingArrives}
+                  onChange={(e) =>
+                    setValues((v) => ({
+                      ...v,
+                      shippingArrives: e.target.value,
+                    }))
+                  }
+                />
               </div>
             </div>
           </FormCard>
@@ -310,38 +623,67 @@ export function ProductForm({
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.35fr_1fr]">
-        <FormCard title="Category">
+        <FormCard title="Features">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-ink-600">Product Category</Label>
-            <Input
-              className="h-10 rounded-[8px]"
-              disabled
-              value="Men's Clothes"
+            <Label className="text-ink-600">Feature list</Label>
+            <textarea
+              rows={6}
+              className="w-full rounded-[8px] border border-input bg-transparent px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              placeholder="- Multiple strap configurations"
+              value={values.features}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, features: e.target.value }))
+              }
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-ink-600">Product Sub-Category</Label>
-            <Input
-              className="h-10 rounded-[8px]"
-              disabled
-              value="Men's Tops & T-Shirts"
-            />
+            <p className="text-xs text-ink-400">One feature per line.</p>
           </div>
         </FormCard>
-        <FormCard title="Manage Stock">
+        <FormCard title="Care">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-ink-600">Stock Keeping Unit</Label>
-            <Input className="h-10 rounded-[8px]" disabled value="SKU-0001" />
+            <Label className="text-ink-600">Care instructions</Label>
+            <textarea
+              rows={6}
+              className="w-full rounded-[8px] border border-input bg-transparent px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              placeholder="- Spot clean as needed"
+              value={values.care}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, care: e.target.value }))
+              }
+            />
+            <p className="text-xs text-ink-400">One instruction per line.</p>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-ink-600">Product Stock</Label>
-              <Input className="h-10 rounded-[8px]" disabled value="0" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-ink-600">Minimum Stock</Label>
-              <Input className="h-10 rounded-[8px]" disabled value="0" />
-            </div>
+        </FormCard>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.35fr_1fr]">
+        <FormCard title="Shipping">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-ink-600">Shipping details</Label>
+            <textarea
+              rows={6}
+              className="w-full rounded-[8px] border border-input bg-transparent px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              placeholder="- Free shipping on orders over 500 Birr"
+              value={values.shipping}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, shipping: e.target.value }))
+              }
+            />
+            <p className="text-xs text-ink-400">One detail per line.</p>
+          </div>
+        </FormCard>
+        <FormCard title="Returns">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-ink-600">Returns policy</Label>
+            <textarea
+              rows={6}
+              className="w-full rounded-[8px] border border-input bg-transparent px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              placeholder="- Easy return requests"
+              value={values.returns}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, returns: e.target.value }))
+              }
+            />
+            <p className="text-xs text-ink-400">One policy per line.</p>
           </div>
         </FormCard>
       </div>

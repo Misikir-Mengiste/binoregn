@@ -1,13 +1,15 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { TableToolbar } from "@/components/table-toolbar";
 import { Pagination } from "@/components/pagination";
 import { InitialsAvatar } from "@/components/initials-avatar";
+import { cn } from "@/lib/utils";
 
 type OrderRow = {
   id: string;
@@ -15,6 +17,7 @@ type OrderRow = {
   buyerPhone: string;
   buyerAddress: string;
   deliveryStatus: string;
+  fulfillmentStatus: string;
   cashReconciledAt: Date | null;
   createdAt: Date;
   product: { name: string; priceBirr: number; imageUrls: string[] };
@@ -22,7 +25,7 @@ type OrderRow = {
   commission: { status: string; amountBirr: number } | null;
 };
 
-const DELIVERY_ACTIONS = ["DELIVERED", "CANCELLED", "RETURNED"] as const;
+const FULFILLMENT_STEPS = ["PLACED", "PROCESSING", "SHIPPED", "DELIVERED"] as const;
 const PAGE_SIZE = 8;
 
 export function OrdersClient({ orders: allOrders }: { orders: OrderRow[] }) {
@@ -54,17 +57,12 @@ export function OrdersClient({ orders: allOrders }: { orders: OrderRow[] }) {
   const pageCount = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
   const pageItems = orders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  async function updateDelivery(
-    id: string,
-    status: (typeof DELIVERY_ACTIONS)[number],
-  ) {
+  async function markCashReconciled(id: string) {
     setPendingId(id);
     setError(null);
     try {
-      const response = await fetch(`/api/admin/orders/${id}/delivery`, {
+      const response = await fetch(`/api/admin/orders/${id}/cash-reconciled`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => null);
@@ -78,12 +76,17 @@ export function OrdersClient({ orders: allOrders }: { orders: OrderRow[] }) {
     }
   }
 
-  async function markCashReconciled(id: string) {
+  async function updateFulfillment(
+    id: string,
+    status: (typeof FULFILLMENT_STEPS)[number],
+  ) {
     setPendingId(id);
     setError(null);
     try {
-      const response = await fetch(`/api/admin/orders/${id}/cash-reconciled`, {
+      const response = await fetch(`/api/admin/orders/${id}/fulfillment`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => null);
@@ -124,178 +127,187 @@ export function OrdersClient({ orders: allOrders }: { orders: OrderRow[] }) {
         <p className="px-5 pt-3 text-sm text-destructive">{error}</p>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-[13.5px]">
-          <thead>
-            <tr className="bg-surface-100 text-xs text-ink-400">
-              <th className="px-5 py-3 font-medium">Product Name</th>
-              <th className="px-5 py-3 font-medium">Customer Name</th>
-              <th className="px-5 py-3 font-medium">Order Id</th>
-              <th className="px-5 py-3 font-medium">Amount</th>
-              <th className="px-5 py-3 font-medium">Status</th>
-              <th className="px-5 py-3 font-medium">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageItems.map((order) => {
-              const locked = order.commission !== null;
-              const busy = pendingId === order.id;
-              const open = expandedId === order.id;
-              return (
-                <Fragment key={order.id}>
-                  <tr className="border-t border-border">
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        {order.product.imageUrls[0] ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={order.product.imageUrls[0]}
-                            alt=""
-                            className="h-10 w-10 rounded-[8px] object-cover"
-                          />
-                        ) : (
-                          <div className="h-10 w-10 rounded-[8px] bg-teal-100" />
-                        )}
-                        <div>
-                          <p className="font-semibold text-foreground">
-                            {order.product.name}
-                          </p>
-                          <p className="text-xs text-ink-400">
-                            Affiliate product
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <InitialsAvatar email={order.buyerName} size="sm" />
-                        <div>
-                          <p className="font-semibold text-foreground">
-                            {order.buyerName}
-                          </p>
-                          <p className="text-xs text-ink-400">
-                            {order.buyerPhone}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <p className="font-semibold text-foreground">
-                        #{order.id.slice(0, 10)}
-                      </p>
-                      <p className="text-xs text-ink-400">
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </p>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <p className="font-semibold text-foreground">
-                        {order.product.priceBirr.toLocaleString()} Birr
-                      </p>
-                      <p className="text-xs text-ink-400">Cash on Delivery</p>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex flex-col items-start gap-1">
-                        <StatusBadge status={order.deliveryStatus} />
-                        {order.commission && (
-                          <StatusBadge status={order.commission.status} />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-5 p-5">
+        {pageItems.map((order) => {
+          const locked = order.commission !== null;
+          const busy = pendingId === order.id;
+          const open = expandedId === order.id;
+          const stepIndex = Math.max(
+            0,
+            FULFILLMENT_STEPS.indexOf(order.fulfillmentStatus as (typeof FULFILLMENT_STEPS)[number]),
+          );
+          return (
+            <div
+              key={order.id}
+              className="rounded-[12px] border border-border bg-card shadow-card"
+            >
+              <div className="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="h-20 w-20 overflow-hidden rounded-[10px] bg-surface-100">
+                    {order.product.imageUrls[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={order.product.imageUrls[0]}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-teal-100" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {order.product.name}
+                    </p>
+                    <p className="text-sm text-ink-600">
+                      {order.product.priceBirr.toLocaleString()} Birr
+                    </p>
+                    <p className="mt-2 text-xs text-ink-400">
+                      Affiliate product
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-4 text-xs text-ink-600 sm:grid-cols-2 lg:grid-cols-2">
+                  <div>
+                    <p className="font-semibold text-foreground">Delivery address</p>
+                    <p>{order.buyerName}</p>
+                    <p>{order.buyerAddress}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">Shipping updates</p>
+                    <p>{order.creator.email}</p>
+                    <p>{order.buyerPhone}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-border px-5 py-4">
+                <div className="mb-3 flex items-center justify-between text-xs text-ink-600">
+                  <p>
+                    Preparing to ship on{" "}
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={order.deliveryStatus} />
+                    {order.commission && (
+                      <StatusBadge status={order.commission.status} />
+                    )}
+                  </div>
+                </div>
+                <div className="h-2 w-full rounded-pill bg-surface-100">
+                  <div
+                    className="h-full rounded-pill bg-teal-600"
+                    style={{ width: `${((stepIndex + 1) / FULFILLMENT_STEPS.length) * 100}%` }}
+                  />
+                </div>
+                <div className="mt-3 flex items-center justify-between text-xs text-ink-400">
+                  {FULFILLMENT_STEPS.map((step) => (
+                    <span
+                      key={step}
+                      className={step === order.fulfillmentStatus ? "text-teal-600" : ""}
+                    >
+                      {step === "PLACED"
+                        ? "Order placed"
+                        : step === "PROCESSING"
+                          ? "Processing"
+                          : step === "SHIPPED"
+                            ? "Shipped"
+                            : "Delivered"}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-border px-5 py-4">
+                <p className="text-xs text-ink-400">
+                  Order #{order.id.slice(0, 10)}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/admin/orders/${order.id}/invoice`}
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "sm" }),
+                      "h-8 rounded-[8px] bg-card",
+                    )}
+                  >
+                    Invoice
+                  </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-[8px] bg-card"
+                    onClick={() => setExpandedId(open ? null : order.id)}
+                  >
+                    {open ? "Hide" : "Edit steps"}
+                  </Button>
+                  <button
+                    type="button"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-border bg-card text-ink-400"
+                    onClick={() => setExpandedId(open ? null : order.id)}
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {open && (
+                <div className="border-t border-border bg-surface-100 px-5 py-4">
+                  <div className="flex flex-col gap-3">
+                    <p className="text-xs text-ink-600">
+                      Creator: {order.creator.name ?? order.creator.email} · Cash:{" "}
+                      {order.cashReconciledAt ? "Reconciled" : "Not reconciled"}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {FULFILLMENT_STEPS.map((status) => (
                         <Button
-                          variant="outline"
+                          key={status}
                           size="sm"
-                          className="h-8 rounded-[8px] bg-card"
-                          onClick={() =>
-                            setExpandedId(open ? null : order.id)
+                          variant={
+                            order.fulfillmentStatus === status ? "secondary" : "outline"
                           }
+                          className="rounded-[8px] bg-card"
+                          disabled={busy}
+                          onClick={() => updateFulfillment(order.id, status)}
                         >
-                          Details
+                          Mark{" "}
+                          {status === "PLACED"
+                            ? "placed"
+                            : status === "PROCESSING"
+                              ? "processing"
+                              : status === "SHIPPED"
+                                ? "shipped"
+                                : "delivered"}
                         </Button>
-                        <button
-                          type="button"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-border bg-card text-ink-400"
-                          onClick={() =>
-                            setExpandedId(open ? null : order.id)
-                          }
+                      ))}
+                      {!order.cashReconciledAt && (
+                        <Button
+                          size="sm"
+                          className="rounded-[8px]"
+                          disabled={busy || locked}
+                          onClick={() => markCashReconciled(order.id)}
                         >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  {open && (
-                    <tr className="bg-surface-100">
-                      <td colSpan={6} className="px-5 py-4">
-                        <div className="flex flex-col gap-3">
-                          <p className="text-xs text-ink-600">
-                            Address: {order.buyerAddress} · Creator:{" "}
-                            {order.creator.name ?? order.creator.email} · Cash:{" "}
-                            {order.cashReconciledAt
-                              ? "Reconciled"
-                              : "Not reconciled"}
-                          </p>
-                          {!locked ? (
-                            <div className="flex flex-wrap gap-2">
-                              {DELIVERY_ACTIONS.map((status) => (
-                                <Button
-                                  key={status}
-                                  size="sm"
-                                  variant={
-                                    order.deliveryStatus === status
-                                      ? "secondary"
-                                      : "outline"
-                                  }
-                                  className="rounded-[8px] bg-card"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    updateDelivery(order.id, status)
-                                  }
-                                >
-                                  Mark{" "}
-                                  {status.charAt(0) +
-                                    status.slice(1).toLowerCase()}
-                                </Button>
-                              ))}
-                              {!order.cashReconciledAt && (
-                                <Button
-                                  size="sm"
-                                  className="rounded-[8px]"
-                                  disabled={busy}
-                                  onClick={() => markCashReconciled(order.id)}
-                                >
-                                  Mark cash reconciled
-                                </Button>
-                              )}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">
-                              Locked — a commission already exists for this
-                              order.
-                            </p>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              );
-            })}
-            {pageItems.length === 0 && (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="px-5 py-10 text-center text-sm text-muted-foreground"
-                >
-                  {allOrders.length === 0
-                    ? "No orders yet."
-                    : "No orders match your filters."}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                          Mark cash reconciled
+                        </Button>
+                      )}
+                      {locked && (
+                        <p className="text-xs text-muted-foreground">
+                          Locked — a commission already exists for this order.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {pageItems.length === 0 && (
+          <p className="py-10 text-center text-sm text-muted-foreground">
+            {allOrders.length === 0
+              ? "No orders yet."
+              : "No orders match your filters."}
+          </p>
+        )}
       </div>
       <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
     </div>

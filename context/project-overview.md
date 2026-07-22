@@ -30,6 +30,7 @@ Affiliate Marketplace is a single-seller platform where one admin lists physical
 - Creator-attributed product landing page via affiliate link
 - No-payment checkout that places an order and locks creator attribution
 - No buyer accounts required
+- Optional email for order tracking link + public order tracking page
 
 ### Creator
 
@@ -39,15 +40,21 @@ Affiliate Marketplace is a single-seller platform where one admin lists physical
 - View and copy affiliate links only for approved products
 - View own earnings: pending and paid commission totals (never other creators’ data)
 - Commission amount shown on a product only after approval for that product
+- Complete creator onboarding: name, username, platform presence, and payout details
+- Request withdrawals from earnings with admin approval
+- View printable invoices for own referred orders (non-tax receipt)
 
 ### Admin
 
 - Fixed/seeded admin identity (not creator self-registration)
-- Product CRUD including image upload
+- Product CRUD including image upload and detailed sections (category, sub-category, features, care, shipping, returns, colors, sizes)
 - Approve or reject creator applications (manual, with confirmation)
+- Approve creator onboarding profiles before dashboard access
 - Update order delivery status (Placed, Delivered, Cancelled, Returned)
 - Mark an order's COD cash as reconciled/collected — a separate manual action from marking it Delivered
 - Mark commissions Paid after offline payout
+- Generate printable order invoices for buyers (non-tax receipt)
+- Approve or reject creator withdrawal requests
 - Dashboard signals for pending commissions, paid totals, and new applications
 
 ### Commission and attribution rules
@@ -70,6 +77,7 @@ Affiliate Marketplace is a single-seller platform where one admin lists physical
 - Product image storage via S3-compatible bucket or Cloudinary
 - Manual order fulfillment and manual commission payout marking
 - Fixed Birr commissions and delivered-only commission trigger
+- Printable order invoice view for admin (non-tax receipt)
 - Design system adapted for product cards, status badges, and creator/admin dashboards
 
 ### Out of Scope

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 
 // Single role-aware landing spot after any sign-in method (OTP,
 // password, Google) — used as the universal post-sign-in
@@ -11,5 +12,22 @@ export default async function DashboardRedirect() {
   if (!session?.user) {
     redirect("/sign-in");
   }
-  redirect(session.user.role === "ADMIN" ? "/admin" : "/creator");
+  if (session.user.role === "ADMIN") {
+    redirect("/admin");
+  }
+
+  const creator = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { creatorOnboardingCompletedAt: true, creatorProfileStatus: true },
+  });
+
+  if (!creator?.creatorOnboardingCompletedAt) {
+    redirect("/onboarding");
+  }
+
+  if (creator.creatorProfileStatus !== "APPROVED") {
+    redirect("/onboarding/pending");
+  }
+
+  redirect("/creator");
 }

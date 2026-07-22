@@ -40,16 +40,62 @@ enum PayoutMethod {
   CBE_BIRR
 }
 
+enum CreatorPlatform {
+  TIKTOK
+  INSTAGRAM
+  YOUTUBE
+  FACEBOOK
+  TELEGRAM
+  OTHER
+}
+
+enum CreatorCategory {
+  TECH
+  FASHION
+  BEAUTY
+  LIFESTYLE
+  FOOD
+  GAMING
+  EDUCATION
+  COMEDY
+  OTHER
+}
+
+enum CreatorProfileStatus {
+  PENDING
+  APPROVED
+}
+
+// Admin-managed picklist for the "Bank name" / wallet-provider choice
+// shown on the creator sign-up and settings payout forms — replaces
+// the previously hardcoded CREATOR_BANKS array so admin can add/
+// deactivate banks (and wallet providers like Telebirr) without a
+// code change. Purely reference data: it does not change how money
+// moves (still manual, admin-mediated payouts) or the PayoutMethod
+// enum's BANK_TRANSFER/TELEBIRR top-level split.
+enum PayoutOptionCategory {
+  BANK
+  WALLET
+}
+
+model PayoutOption {
+  id        String               @id @default(cuid())
+  category  PayoutOptionCategory
+  name      String
+  isActive  Boolean              @default(true)
+  sortOrder Int                  @default(0)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@unique([category, name])
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
   email         String    @unique
   emailVerified DateTime?
   image         String?
-  // Set only by POST /api/auth/sign-up. null for accounts created
-  // via OTP or Google — those sign-in methods stay available
-  // regardless of whether a password is also set.
-  passwordHash  String?
   role          Role      @default(CREATOR)
   createdAt     DateTime  @default(now())
 
@@ -62,6 +108,16 @@ model User {
   payoutAccountNumber String?
   payoutBankName      String?
 
+  // Creator onboarding profile (multi-step sign-up UI).
+  creatorUsername              String?               @unique
+  creatorPhone                 String?
+  creatorDisplayName           String?
+  creatorPlatform              CreatorPlatform?
+  creatorProfileUrl            String?
+  creatorCategory              CreatorCategory?
+  creatorProfileStatus         CreatorProfileStatus?
+  creatorOnboardingCompletedAt DateTime?
+
   accounts Account[]
   sessions Session[]
 
@@ -72,6 +128,7 @@ model User {
   // relations on Order.
   ordersAsCreator Order[]         @relation("OrderCreator")
   commissions     Commission[]
+  withdrawals     Withdrawal[]
 }
 
 model Account {
@@ -118,9 +175,29 @@ model Product {
   id             String   @id @default(cuid())
   name           String
   description    String?
+  category       String?
+  subCategory    String?
+  features       String[] @default([])
+  care           String[] @default([])
+  shipping       String[] @default([])
+  returns        String[] @default([])
+  colors         String[] @default([])
+  sizes          String[] @default([])
   // Whole Birr amounts — no online payment gateway means no
   // currency-conversion or minor-unit (cents) handling is needed.
   priceBirr      Int
+  compareAtBirr  Int?
+  rating         Float?
+  ratingCount    Int?     @default(0)
+  soldCount      Int?     @default(0)
+  sellerName     String?
+  sellerVerified Boolean  @default(false)
+  sellerRating   Float?
+  sellerSoldCount Int?    @default(0)
+  shippingDiscountLabel String?
+  shippingPackageLabel  String?
+  shippingDeliveryTime  String?
+  shippingArrives       String?
   commissionBirr Int
   imageUrls      String[]
   createdAt      DateTime @default(now())
@@ -180,6 +257,10 @@ model AffiliateLink {
   applicationId String      @unique
   application   Application @relation(fields: [applicationId], references: [id])
   createdAt     DateTime    @default(now())
+  // Incremented once per storefront page load
+  // (app/(public)/p/[creator]/[slug]/page.tsx) — a simple counter, not
+  // a per-visitor/deduped analytics event log.
+  viewCount     Int         @default(0)
 
   orders Order[]
 
@@ -195,6 +276,13 @@ enum OrderDeliveryStatus {
   DELIVERED
   CANCELLED
   RETURNED
+}
+
+enum OrderFulfillmentStatus {
+  PLACED
+  PROCESSING
+  SHIPPED
+  DELIVERED
 }
 
 model Order {
@@ -216,8 +304,11 @@ model Order {
   buyerName    String
   buyerPhone   String
   buyerAddress String
+  buyerEmail   String?
+  quantity     Int           @default(1)
 
   deliveryStatus   OrderDeliveryStatus @default(PLACED)
+  fulfillmentStatus OrderFulfillmentStatus @default(PLACED)
   // null until the admin performs the separate "Mark Cash
   // Reconciled" action (architecture.md Storage Model section).
   cashReconciledAt DateTime?
@@ -238,6 +329,12 @@ enum CommissionStatus {
   PAID
 }
 
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Commission {
   id         String           @id @default(cuid())
   orderId    String           @unique
@@ -251,4 +348,18 @@ model Commission {
   status     CommissionStatus @default(PENDING)
   createdAt  DateTime         @default(now())
   paidAt     DateTime?
+}
+
+model Withdrawal {
+  id            String           @id @default(cuid())
+  creatorId     String
+  creator       User             @relation(fields: [creatorId], references: [id])
+  amountBirr    Int
+  payoutMethod  PayoutMethod
+  payoutAccountName   String?
+  payoutAccountNumber String?
+  payoutBankName      String?
+  status       WithdrawalStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+  decidedAt    DateTime?
 }

@@ -29,7 +29,13 @@ const MAIN_NAV = [
   { href: "/creator/earnings", label: "Earnings", icon: Wallet },
 ];
 
-export function CreatorSidebar({ email }: { email: string }) {
+export function CreatorSidebar({
+  email,
+  onNavigate,
+}: {
+  email: string;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const displayName = email.split("@")[0] || "Creator";
 
@@ -74,6 +80,7 @@ export function CreatorSidebar({ email }: { email: string }) {
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={onNavigate}
                   className={cn(
                     "flex items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-600 transition-colors hover:bg-surface-100",
                     active && "bg-surface-100 font-semibold text-teal-600",
@@ -97,13 +104,35 @@ export function CreatorSidebar({ email }: { email: string }) {
         </p>
         <ul className="flex flex-col gap-0.5">
           <li>
+            <Link
+              href="/creator/settings"
+              onClick={onNavigate}
+              className={cn(
+                "flex items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-600 transition-colors hover:bg-surface-100",
+                pathname.startsWith("/creator/settings") &&
+                  "bg-surface-100 font-semibold text-teal-600",
+              )}
+            >
+              <Settings
+                className={cn(
+                  "h-4 w-4",
+                  pathname.startsWith("/creator/settings") ? "text-teal-600" : "text-ink-400",
+                )}
+              />
+              Settings
+            </Link>
+          </li>
+          <li>
             <button
               type="button"
-              onClick={() => signOut({ callbackUrl: "/sign-in" })}
+              onClick={() => {
+                onNavigate?.();
+                signOut({ callbackUrl: "/sign-in" });
+              }}
               className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-600 transition-colors hover:bg-surface-100"
             >
               <Settings className="h-4 w-4 text-ink-400" />
-              Settings / Sign out
+              Sign out
             </button>
           </li>
         </ul>

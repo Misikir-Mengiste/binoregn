@@ -28,6 +28,43 @@ async function seedAdmin() {
   return admin;
 }
 
+// Admin-manageable payout picklist (context: replaces the previously
+// hardcoded CREATOR_BANKS array). Idempotent upsert on
+// [category, name] so re-running the seed never duplicates rows or
+// clobbers an admin's later isActive toggle.
+const SEED_BANKS = [
+  "Commercial Bank of Ethiopia",
+  "Awash Bank",
+  "Dashen Bank",
+  "Bank of Abyssinia",
+  "Cooperative Bank of Oromia",
+  "Wegagen Bank",
+  "Abay Bank",
+  "Other",
+];
+const SEED_WALLETS = ["Telebirr"];
+
+async function seedPayoutOptions() {
+  let count = 0;
+  for (const [index, name] of SEED_BANKS.entries()) {
+    await prisma.payoutOption.upsert({
+      where: { category_name: { category: "BANK", name } },
+      update: {},
+      create: { category: "BANK", name, sortOrder: index },
+    });
+    count += 1;
+  }
+  for (const [index, name] of SEED_WALLETS.entries()) {
+    await prisma.payoutOption.upsert({
+      where: { category_name: { category: "WALLET", name } },
+      update: {},
+      create: { category: "WALLET", name, sortOrder: index },
+    });
+    count += 1;
+  }
+  console.log(`Seeded ${count} payout options (banks + wallets).`);
+}
+
 // Demo data for local development / a populated-looking dashboard.
 // Not idempotent — running this twice adds a second copy of
 // everything (products have no natural unique key to upsert on).
@@ -35,6 +72,50 @@ async function seedAdmin() {
 // twice doesn't duplicate the demo set specifically (your own real
 // products/creators are untouched either way).
 const DEMO_MARKER = "Wireless Bluetooth Earbuds";
+
+// Placeholder photos — no real product photography exists for demo
+// data, and Cloudinary uploads only happen via the admin product
+// form's client-side signed upload (lib/cloudinary.ts), not from
+// this script. Lorem Picsum's seeded URLs are deterministic (same
+// seed always returns the same photo) and were verified live
+// (curl, 200 + image/jpeg) before being hardcoded here.
+const imageSeed = (slug: string, n: number) =>
+  `https://picsum.photos/seed/${slug}-${n}/800/600`;
+
+// Shared by seedDemoData() (new rows) and backfillProductImages()
+// (rows created before imageUrls existed in the seed) so the two
+// never drift out of sync.
+const PRODUCT_IMAGE_SLUGS: Record<string, string> = {
+  "Wireless Bluetooth Earbuds": "earbuds",
+  "Smart Watch Fitness Tracker": "smartwatch",
+  "Portable Power Bank 20000mAh": "powerbank",
+  "Leather Crossbody Bag": "bag",
+  "Traditional Habesha Dress": "dress",
+  "Stainless Steel Water Bottle": "bottle",
+  "Wireless Phone Charger Pad": "charger",
+  "UV Protection Sunglasses": "sunglasses",
+};
+
+// Existing rows from before imageUrls was part of the seed (or any
+// product an admin created without uploading photos) are left with
+// imageUrls: [] forever, since seedDemoData() is marker-guarded and
+// only ever runs its create() calls once. Runs unconditionally and
+// only touches rows that are still empty, so it's safe to re-run.
+async function backfillProductImages() {
+  let count = 0;
+  for (const [name, slug] of Object.entries(PRODUCT_IMAGE_SLUGS)) {
+    const result = await prisma.product.updateMany({
+      where: { name, imageUrls: { isEmpty: true } },
+      data: {
+        imageUrls: [imageSeed(slug, 1), imageSeed(slug, 2)],
+      },
+    });
+    count += result.count;
+  }
+  if (count > 0) {
+    console.log(`Backfilled images for ${count} product(s) that had none.`);
+  }
+}
 
 async function seedDemoData() {
   const alreadySeeded = await prisma.product.findFirst({
@@ -48,17 +129,148 @@ async function seedDemoData() {
 
   const products = await Promise.all(
     [
-      { name: "Wireless Bluetooth Earbuds", priceBirr: 2200, commissionBirr: 200 },
-      { name: "Smart Watch Fitness Tracker", priceBirr: 3500, commissionBirr: 350 },
-      { name: "Portable Power Bank 20000mAh", priceBirr: 1200, commissionBirr: 100 },
-      { name: "Leather Crossbody Bag", priceBirr: 1800, commissionBirr: 180 },
-      { name: "Traditional Habesha Dress", priceBirr: 4500, commissionBirr: 450 },
-      { name: "Stainless Steel Water Bottle", priceBirr: 450, commissionBirr: 50 },
-      { name: "Wireless Phone Charger Pad", priceBirr: 900, commissionBirr: 90 },
-      { name: "UV Protection Sunglasses", priceBirr: 650, commissionBirr: 70 },
-    ].map((data) =>
+      {
+        name: "Wireless Bluetooth Earbuds",
+        priceBirr: 2200,
+        commissionBirr: 200,
+        description: "Compact earbuds with a pocket case and clear audio.",
+        category: "Electronics",
+        subCategory: "Audio",
+        colors: ["#1F2933", "#E5E7EB"],
+        sizes: [],
+        features: [
+          "Bluetooth 5.3 connectivity",
+          "Noise isolation",
+          "Compact charging case",
+        ],
+        care: ["Wipe with dry cloth", "Avoid moisture exposure"],
+        shipping: ["Free delivery over 2000 Birr", "Ships in 1-2 business days"],
+        returns: ["7-day return window", "Must include original packaging"],
+        imageSlug: "earbuds",
+      },
+      {
+        name: "Smart Watch Fitness Tracker",
+        priceBirr: 3500,
+        commissionBirr: 350,
+        description: "Track steps, sleep, and heart rate with a bright display.",
+        category: "Electronics",
+        subCategory: "Wearables",
+        colors: ["#111827", "#9CA3AF"],
+        sizes: ["S", "M", "L"],
+        features: ["Heart rate monitoring", "Sleep tracking", "Water resistant"],
+        care: ["Clean with microfiber cloth", "Charge with included cable only"],
+        shipping: ["Standard shipping available", "Next-day delivery in Addis"],
+        returns: ["10% restocking fee on opened boxes"],
+        imageSlug: "smartwatch",
+      },
+      {
+        name: "Portable Power Bank 20000mAh",
+        priceBirr: 1200,
+        commissionBirr: 100,
+        description: "High-capacity backup power for phones and tablets.",
+        category: "Electronics",
+        subCategory: "Accessories",
+        colors: ["#111827", "#6B7280"],
+        sizes: [],
+        features: ["20000mAh capacity", "Dual USB output", "Fast charging"],
+        care: ["Keep away from heat", "Recharge every 3 months"],
+        shipping: ["Ships nationwide", "Delivery 2-4 business days"],
+        returns: ["14-day return window"],
+        imageSlug: "powerbank",
+      },
+      {
+        name: "Leather Crossbody Bag",
+        priceBirr: 1800,
+        commissionBirr: 180,
+        description: "Soft leather bag with adjustable strap and inner pockets.",
+        category: "Accessories",
+        subCategory: "Bags",
+        colors: ["#7C4A2D", "#1F2933"],
+        sizes: [],
+        features: ["Adjustable strap", "Inner zip pocket", "Premium leather"],
+        care: ["Condition leather monthly", "Avoid direct sunlight"],
+        shipping: ["Free delivery in Addis Ababa"],
+        returns: ["7-day return window", "Must be unused"],
+        imageSlug: "bag",
+      },
+      {
+        name: "Traditional Habesha Dress",
+        priceBirr: 4500,
+        commissionBirr: 450,
+        description: "Handwoven traditional dress with embroidered detailing.",
+        category: "Clothing",
+        subCategory: "Dresses",
+        colors: ["#F9FAFB", "#E0B56B"],
+        sizes: ["XS", "S", "M", "L", "XL"],
+        features: ["Handwoven fabric", "Embroidered neckline", "Breathable"],
+        care: ["Dry clean only", "Store flat to avoid wrinkles"],
+        shipping: ["Made to order", "Ships in 5-7 business days"],
+        returns: ["Custom orders are final sale"],
+        imageSlug: "dress",
+      },
+      {
+        name: "Stainless Steel Water Bottle",
+        priceBirr: 450,
+        commissionBirr: 50,
+        description: "Insulated bottle that keeps drinks cold or hot.",
+        category: "Home",
+        subCategory: "Kitchen",
+        colors: ["#111827", "#F97316"],
+        sizes: ["18L", "20L"],
+        features: ["Double wall insulation", "Leak-proof lid"],
+        care: ["Hand wash with mild soap"],
+        shipping: ["Ships in 1-2 business days"],
+        returns: ["30-day return window"],
+        imageSlug: "bottle",
+      },
+      {
+        name: "Wireless Phone Charger Pad",
+        priceBirr: 900,
+        commissionBirr: 90,
+        description: "Slim pad for fast wireless charging.",
+        category: "Electronics",
+        subCategory: "Accessories",
+        colors: ["#111827", "#E5E7EB"],
+        sizes: [],
+        features: ["10W fast charge", "Non-slip surface"],
+        care: ["Avoid liquid spills"],
+        shipping: ["Local delivery available"],
+        returns: ["7-day return window"],
+        imageSlug: "charger",
+      },
+      {
+        name: "UV Protection Sunglasses",
+        priceBirr: 650,
+        commissionBirr: 70,
+        description: "Lightweight sunglasses with UV400 lenses.",
+        category: "Accessories",
+        subCategory: "Eyewear",
+        colors: ["#111827", "#A16207"],
+        sizes: [],
+        features: ["UV400 protection", "Polarized lenses"],
+        care: ["Store in case", "Clean with microfiber cloth"],
+        shipping: ["Ships nationwide"],
+        returns: ["14-day return window"],
+        imageSlug: "sunglasses",
+      },
+    ].map(({ imageSlug, ...data }) =>
       prisma.product.create({
-        data: { ...data, description: null, imageUrls: [] },
+        data: {
+          ...data,
+          compareAtBirr: Math.round(data.priceBirr * 1.2),
+          rating: 4.7,
+          ratingCount: 120,
+          soldCount: 1000,
+          sellerName: "Binoregn",
+          sellerVerified: true,
+          sellerRating: 5.0,
+          sellerSoldCount: 1000,
+          shippingDiscountLabel: "50% off",
+          shippingPackageLabel: "Regular",
+          shippingDeliveryTime: "3-4 working days",
+          shippingArrives: "8-12 Oct 2026",
+          imageUrls: [imageSeed(imageSlug, 1), imageSeed(imageSlug, 2)],
+        },
       }),
     ),
   );
@@ -274,7 +486,9 @@ async function seedDemoData() {
 
 async function main() {
   await seedAdmin();
+  await seedPayoutOptions();
   await seedDemoData();
+  await backfillProductImages();
 }
 
 main()

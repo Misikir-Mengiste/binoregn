@@ -126,6 +126,14 @@ Soft pills with tinted backgrounds (not solid fills).
 - Thumbnail 140px; name 13.5px/600; price 14px/700
 - Commission badge: teal-100 / teal-700 pill — **only after approval**; else "Apply to earn commission" CTA
 
+### Invoice (admin + creator)
+- Tailwind CSS-inspired: clean typography, neutral tables, generous spacing.
+- Centered `max-w` panel with `rounded-lg`, `border`, `shadow-card` on white.
+- Header row: brand mark + "Invoice" metadata (invoice number, order date, status).
+- Two-column detail grid: "Billed to" + "Order details" (payment is COD).
+- Line-item table: soft header background, clear totals block on right.
+- Print behavior: hide action buttons with `print:hidden`, drop shadows/borders in print.
+
 ---
 
 ## Interaction rules that affect UI (not just visuals)

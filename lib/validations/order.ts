@@ -9,6 +9,8 @@ export const createOrderSchema = z.object({
   buyerName: z.string().trim().min(1).max(200),
   buyerPhone: z.string().trim().min(1).max(50),
   buyerAddress: z.string().trim().min(1).max(1000),
+  buyerEmail: z.string().trim().email().optional(),
+  quantity: z.number().int().min(1).max(99).default(1),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;

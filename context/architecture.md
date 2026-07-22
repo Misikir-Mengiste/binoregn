@@ -16,11 +16,11 @@
 
 | Path / area        | Owns | Must not |
 | ------------------ | ---- | -------- |
-| `app/(public)/p/[slug]` | Creator-attributed product landing page + no-payment checkout (built 2026-07-19) | Require buyer auth; mutate commission state; edit products; load/render creator identity (deliberately never selected) |
+| `app/(public)/p/[creator]/[slug]` | Creator-attributed product landing page + no-payment checkout (built 2026-07-19) | Require buyer auth; mutate commission state; edit products; render creator identity (we only use the username in the URL, not in-page) |
 | `app/creator`      | Creator dashboard: browse products, apply to promote, view own links and earnings | Access other creators’ data; create/edit products; approve applications; change order/commission status |
 | `app/admin`        | Admin dashboard: product CRUD, application approve/reject, order status, mark commissions paid | Expose admin actions to creators; auto-trigger payouts or delivery |
-| `app/sign-in`      | Shared sign-in entry (email OTP two-step, password, Google) for both creator and admin — not auth-gated itself | Contain role-specific dashboard UI |
-| `app/sign-up`      | Self-serve creator account creation (email + password only — no OTP/Google sign-up flow, those create an account on first sign-in already) | Create an `ADMIN` account; attach a password to an existing email (see invariant 9) |
+| `app/sign-in`      | Shared sign-in entry (email OTP two-step, Google) for both creator and admin — not auth-gated itself | Contain role-specific dashboard UI |
+| `app/sign-up`      | Redirect into creator onboarding after sign-in | Create an `ADMIN` account |
 | `app/dashboard`    | Single role-aware redirect after any sign-in method | Render any UI of its own |
 | `app/api` (or Route Handlers colocated with features) | Validated mutations with auth/ownership checks | Bypass `lib/commission` for commission transitions; trust client role claims without server verification |
 | `lib/commission`   | Creating and transitioning commission status (None → Pending → Paid) based on `deliveryStatus` AND `cashReconciledAt` together | Be called from public checkout for commission creation before Delivered; transition to Pending on Delivered alone without cash reconciliation; contain unrelated UI or product CRUD |
@@ -33,7 +33,7 @@
 
 | Store | What lives here | What does not |
 | ----- | --------------- | ------------- |
-| **PostgreSQL (via Prisma)** | Products (price, fixed Birr commission amount, image URL refs), creators, applications + status, affiliate links (creator+product), orders + delivery status + cash-reconciliation status + immutable creator attribution, commissions + pending/paid status | Binary files, session secrets as plaintext product data, computed UI-only state |
+| **PostgreSQL (via Prisma)** | Products (price, fixed Birr commission amount, category/subcategory, images, colors, sizes, features, care, shipping, returns), creators, applications + status, affiliate links (creator+product), orders + delivery status + fulfillment status + cash-reconciliation status + immutable creator attribution, commissions + pending/paid status | Binary files, session secrets as plaintext product data, computed UI-only state |
 | **File storage (Cloudinary)** | Product image binaries | Structured business records; commission or order state |
 | **Cache** | Nothing in MVP | Do not introduce a cache for auth, commissions, or inventory without updating this file |
 
@@ -65,11 +65,10 @@ This keeps the auth boundary obvious per-path once auth exists.
   the creator's identity), `POST /api/public/orders` (checkout;
   resolves `productId`/`creatorId` server-side from the affiliate
   link, never trusts client-supplied IDs, per invariant 5).
-- `app/api/creator/*` — reserved, not yet built. Needs creator auth
-  (NextAuth) before any route here is meaningful.
-- `app/api/admin/*` — reserved, not yet built. Needs admin auth,
-  and mutations here are also where `lib/commission` will be
-  called from once it exists.
+- `app/api/creator/*` — creator-authenticated routes (catalog,
+  applications, links, earnings, payout method, onboarding).
+- `app/api/admin/*` — admin-authenticated routes (products,
+  applications, orders, commissions, uploads, dashboard).
 - `lib/api-response.ts` — `apiSuccess(data, status?)` /
   `apiError(message, status)`. Every route handler returns one of
   these — success is always `{ data }`, failure is always `{
@@ -128,24 +127,10 @@ This keeps the auth boundary obvious per-path once auth exists.
   catcher, inbox UI at `http://localhost:8025`) so the OTP flow is
   testable without real SMTP credentials. Production must be
   pointed at a real provider via the `SMTP_*` env vars.
-- **Password auth** (added 2026-07-19, a deliberate change to what
-  was originally invariant 8 — see Invariants below): `User.passwordHash`
-  (`String?`, `lib/password.ts` — bcryptjs, 12 salt rounds). A
-  second Credentials provider (id `"password"` in `auth.ts`) signs
-  in with `signIn("password", { email, password })`, fails closed
-  (returns `null`, never throws or falls through) if the user has
-  no `passwordHash` — an account created via OTP/Google that never
-  set a password can't be signed into with *any* password.
-  `POST /api/auth/sign-up` is the **only** place a `passwordHash`
-  gets written, and it only ever creates a brand-new `User` row —
-  see invariant 9. Sign-up always creates role `CREATOR`, same as
-  the OTP path's first-sign-in-creates-account behavior; there is
-  no self-serve path to `ADMIN`.
 - **Post-sign-in redirect**: `app/dashboard/page.tsx` is a single
   role-aware redirect (`ADMIN` → `/admin`, else → `/creator`) used
-  as the destination for all three sign-in methods, so the
-  role-routing logic exists in one place rather than being
-  duplicated (and drifting) across OTP/password/Google handlers.
+  as the destination for all sign-in methods, so the role-routing
+  logic exists in one place rather than being duplicated.
 
 ## File Storage Implementation
 
@@ -180,13 +165,49 @@ invariant 4 (manual status transitions only) is unaffected.
   `app/admin/commissions` — the payout method sits directly next to
   "Mark paid" in the UI, since that's the moment admin actually
   needs it.
+- The specific bank name (when `payoutMethod` is `BANK_TRANSFER`) and
+  the wallet provider's display name (when `TELEBIRR`) are drawn from
+  an admin-managed picklist, `PayoutOption` (`{ category: BANK |
+  WALLET, name, isActive }`), not hardcoded — admin adds/deactivates
+  entries at `app/admin/settings`. `GET /api/creator/payout-options`
+  (creator-only, active-only) is what the sign-up and settings forms
+  fetch to populate the bank dropdown / wallet label. This is
+  reference data only — it doesn't change how or when money moves.
+
+## Creator Onboarding Profile
+
+Creators complete a one-time onboarding form after their first
+sign-in. The profile is stored directly on `User` and includes:
+
+- `creatorUsername` (unique handle)
+- `creatorPhone` (contact phone)
+- `creatorDisplayName`
+- `creatorPlatform` + `creatorProfileUrl`
+- `creatorCategory`
+- `creatorProfileStatus` (starts `PENDING` on submission)
+- `creatorOnboardingCompletedAt` timestamp
+
+The onboarding submission also sets the payout fields listed above,
+so admins always see where to send commissions.
+
+## Creator Withdrawals
+
+Creators can request manual withdrawals from their **paid**
+commission balance. Each withdrawal has:
+
+- `amountBirr`
+- `payoutMethod` + snapshot payout details
+- `status` (`PENDING` → `APPROVED` or `REJECTED`)
+
+Admins approve or reject withdrawals manually; creators see pending
+requests and the remaining balance after withdrawals.
 
 ## Auth and Access Model
 
 | Actor | How they authenticate | What they can do |
 | ----- | --------------------- | ---------------- |
-| Buyer | No account | View creator-attributed product page; place no-payment order |
-| Creator | Google OAuth, email + 6-digit OTP (passwordless), or email + password (self-serve sign-up) | Browse catalog; apply to promote; view/copy own approved links; view own earnings |
+| Buyer | No account | View creator-attributed product page; place no-payment order; optionally receive tracking link via email |
+| Creator | Google OAuth or email + 6-digit OTP (passwordless) | Browse catalog; apply to promote; view/copy own approved links; view own earnings (after admin approves the onboarding profile) |
 | Admin | Single fixed/seeded identity (not creator self-signup) | Product CRUD + image upload; approve/reject applications; set order status; mark commissions Paid |
 
 Ownership rules:
@@ -216,5 +237,7 @@ The codebase must never violate these rules:
 5. **Immutable order attribution** — Creator attribution on an order is set at checkout and never reassigned afterward.
 6. **Single commission mutator** — Nothing outside `lib/commission` creates or transitions commission records.
 7. **Separate order and commission status** — Order status and commission status are distinct fields (and distinct UI badges). Do not collapse them into one status.
-8. **No buyer accounts** — Buyers checkout without accounts; this part is unchanged. (Superseded 2026-07-19: password-based auth for creators is now allowed — see "Password Auth" below. Was originally "no passwords for creators either"; the user explicitly asked for this and confirmed it as a real change, not a misunderstanding.)
-9. **Sign-up never attaches credentials to an existing account** — `POST /api/auth/sign-up` creates a brand-new `User` row only; if the email already exists (including the seeded admin's), it returns 409 rather than setting a password on that row. Unlike OTP/Google, a sign-up POST proves no ownership of the email, so upserting onto an existing row the way OTP does would be an account-takeover vector.
+8. **No buyer accounts** — Buyers checkout without accounts; this part is unchanged. Creators sign in via OTP or Google only.
+9. **Creator dashboard gated by admin approval** — after onboarding, creators see a pending state until an admin marks the profile approved.
+10. **Withdrawals require admin approval** — a withdrawal request is always pending until an admin approves or rejects it.
+11. **Order fulfillment steps are explicit** — admin updates order progress through Placed → Processing → Shipped → Delivered; delivery status still drives commission creation.

@@ -61,7 +61,7 @@ export default function Home() {
           </p>
           <div className="mt-8 flex items-center justify-center gap-3">
             <Link
-              href="/sign-up"
+              href="/sign-in"
               className={cn(buttonVariants({ size: "lg" }))}
             >
               Start earning
@@ -140,14 +140,14 @@ export default function Home() {
             Ready to start?
           </h2>
           <p className="mt-2 text-sm text-ink-600">
-            Sign up with an email and password, an email code, or Google.
+            Continue with Google or receive a 6-digit email code.
           </p>
           <div className="mt-6 flex items-center justify-center gap-3">
             <Link
-              href="/sign-up"
+              href="/sign-in"
               className={cn(buttonVariants({ size: "lg" }))}
             >
-              Sign up
+              Get started
             </Link>
             <Link
               href="/sign-in"

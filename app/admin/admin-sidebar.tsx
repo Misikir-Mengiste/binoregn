@@ -13,7 +13,7 @@ import {
   Search,
   ShoppingBag,
   Settings,
-  Truck,
+  Users,
   Wallet,
 } from "lucide-react";
 import { InitialsAvatar } from "@/components/initials-avatar";
@@ -29,11 +29,19 @@ const MAIN_NAV = [
       { href: "/admin/orders", label: "Orders" },
     ],
   },
+  { href: "/admin/creators", label: "Creators", icon: Users },
   { href: "/admin/applications", label: "Applications", icon: ClipboardCheck },
+  { href: "/admin/withdrawals", label: "Withdrawals", icon: Wallet },
   { href: "/admin/commissions", label: "Commissions", icon: Wallet },
 ];
 
-export function AdminSidebar({ email }: { email: string }) {
+export function AdminSidebar({
+  email,
+  onNavigate,
+}: {
+  email: string;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const displayName = email.split("@")[0] || "Admin";
 
@@ -101,6 +109,7 @@ export function AdminSidebar({ email }: { email: string }) {
                         <li key={child.href}>
                           <Link
                             href={child.href}
+                            onClick={onNavigate}
                             className={cn(
                               "flex items-center gap-2 rounded-[8px] px-3 py-2 text-[13px] font-medium text-ink-600 transition-colors hover:bg-surface-100",
                               active && "bg-surface-100 font-semibold text-teal-600",
@@ -125,6 +134,7 @@ export function AdminSidebar({ email }: { email: string }) {
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={onNavigate}
                   className={cn(
                     "flex items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-600 transition-colors hover:bg-surface-100",
                     active && "bg-surface-100 font-semibold text-teal-600",
@@ -148,10 +158,25 @@ export function AdminSidebar({ email }: { email: string }) {
         </p>
         <ul className="flex flex-col gap-0.5">
           <li>
-            <span className="flex items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-400">
-              <Settings className="h-4 w-4 text-ink-400" />
+            <Link
+              href="/admin/settings"
+              onClick={onNavigate}
+              className={cn(
+                "flex items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-600 transition-colors hover:bg-surface-100",
+                pathname.startsWith("/admin/settings") &&
+                  "bg-surface-100 font-semibold text-teal-600",
+              )}
+            >
+              <Settings
+                className={cn(
+                  "h-4 w-4",
+                  pathname.startsWith("/admin/settings")
+                    ? "text-teal-600"
+                    : "text-ink-400",
+                )}
+              />
               Settings
-            </span>
+            </Link>
           </li>
           <li>
             <span className="flex items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-400">
@@ -162,7 +187,10 @@ export function AdminSidebar({ email }: { email: string }) {
           <li>
             <button
               type="button"
-              onClick={() => signOut({ callbackUrl: "/sign-in" })}
+              onClick={() => {
+                onNavigate?.();
+                signOut({ callbackUrl: "/sign-in" });
+              }}
               className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-600 transition-colors hover:bg-surface-100"
             >
               <ChevronRight className="h-4 w-4 text-ink-400" />

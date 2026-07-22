@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { createOrderSchema } from "@/lib/validations/order";
+import { sendOrderTrackingEmail } from "@/lib/mailer";
 
 // Creates an order from the public, no-payment checkout flow
 // (architecture.md app/(public) boundary — no buyer account).
@@ -24,8 +25,14 @@ export async function POST(request: NextRequest) {
     return apiError(parsed.error.issues[0]?.message ?? "Invalid input", 400);
   }
 
-  const { affiliateLinkSlug, buyerName, buyerPhone, buyerAddress } =
-    parsed.data;
+  const {
+    affiliateLinkSlug,
+    buyerName,
+    buyerPhone,
+    buyerAddress,
+    buyerEmail,
+    quantity,
+  } = parsed.data;
 
   const affiliateLink = await prisma.affiliateLink.findUnique({
     where: { slug: affiliateLinkSlug },
@@ -44,6 +51,8 @@ export async function POST(request: NextRequest) {
       buyerName,
       buyerPhone,
       buyerAddress,
+      buyerEmail,
+      quantity,
     },
     select: {
       id: true,
@@ -53,5 +62,19 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return apiSuccess(order, 201);
+  const host = request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") ?? "http";
+  const trackingUrl = host ? `${proto}://${host}/order/${order.id}` : null;
+
+  if (buyerEmail && trackingUrl) {
+    await sendOrderTrackingEmail(buyerEmail, trackingUrl);
+  }
+
+  return apiSuccess(
+    {
+      ...order,
+      trackingUrl,
+    },
+    201,
+  );
 }

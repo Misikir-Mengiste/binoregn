@@ -11,7 +11,7 @@ export default async function AdminApplicationsPage() {
         id: true,
         status: true,
         createdAt: true,
-        creator: { select: { email: true, name: true } },
+        creator: { select: { id: true, email: true, name: true } },
         product: { select: { name: true, imageUrls: true } },
       },
     }),
