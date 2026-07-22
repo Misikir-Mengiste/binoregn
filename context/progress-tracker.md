@@ -5,6 +5,13 @@ change.
 
 ## Current Phase
 
+- **2026-07-22 — Re-restored `buyerCity` on order read pages.** Added
+  `buyerCity` back into the select/render blocks on
+  `app/(public)/order/[id]/page.tsx`,
+  `app/admin/orders/[id]/invoice/page.tsx`, and
+  `app/creator/orders/[id]/invoice/page.tsx` after it had been removed
+  in a previous build-unblock pass.
+
 - **2026-07-22 — Checkout city + notes fields; Add-to-Cart keys off
   size/color.** Added `Order.buyerCity` (required in app, nullable in DB
   for old rows) and `Order.buyerNotes` (optional) via `prisma db push`.
