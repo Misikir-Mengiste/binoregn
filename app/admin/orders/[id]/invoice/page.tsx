@@ -20,7 +20,6 @@ export default async function AdminOrderInvoicePage({
       buyerName: true,
       buyerPhone: true,
       buyerAddress: true,
-      buyerCity: true,
       buyerEmail: true,
       quantity: true,
       createdAt: true,
@@ -107,7 +106,6 @@ export default async function AdminOrderInvoicePage({
             <div className="mt-2 space-y-1 text-sm text-ink-600">
               <p className="font-semibold text-foreground">{order.buyerName}</p>
               <p>{order.buyerAddress}</p>
-              {order.buyerCity ? <p>{order.buyerCity}</p> : null}
               <p>{order.buyerPhone}</p>
               {order.buyerEmail ? <p>{order.buyerEmail}</p> : null}
             </div>
