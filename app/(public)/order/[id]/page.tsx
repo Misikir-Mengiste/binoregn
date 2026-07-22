@@ -16,7 +16,6 @@ export default async function OrderTrackingPage({
       id: true,
       buyerName: true,
       buyerAddress: true,
-      buyerCity: true,
       buyerPhone: true,
       fulfillmentStatus: true,
       deliveryStatus: true,
@@ -70,7 +69,6 @@ export default async function OrderTrackingPage({
                 <p className="font-semibold text-foreground">Delivery address</p>
                 <p>{order.buyerName}</p>
                 <p>{order.buyerAddress}</p>
-                {order.buyerCity ? <p>{order.buyerCity}</p> : null}
               </div>
               <div>
                 <p className="font-semibold text-foreground">Contact</p>
