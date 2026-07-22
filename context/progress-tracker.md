@@ -5,6 +5,22 @@ change.
 
 ## Current Phase
 
+- **2026-07-22 — Added DB clear command.** Created
+  `prisma/clear.ts` and wired `npm run clear` in `package.json` to
+  wipe application tables (FK-safe delete order) when a full reset is
+  needed.
+
+- **2026-07-22 — Seed script reduced to admin-only.** Per request,
+  `prisma/seed.ts` now seeds only the single `ADMIN_SEED_EMAIL`
+  account and no longer creates payout options, products, creators,
+  applications, links, orders, or commissions.
+
+- **2026-07-22 — Auth host trust fix for IP/domain access.** Enabled
+  `trustHost: true` in `auth.ts` so Auth.js accepts requests served by
+  public IP/domain hosts (for example `149.102.140.160`) instead of
+  throwing untrusted-host errors. Added `AUTH_URL` and
+  `AUTH_TRUST_HOST` guidance to `.env.example`.
+
 - **2026-07-22 — Storefront product page matched to a fragrance-style
   reference.** `app/(public)/p/[creator]/[slug]`: added a **Main Notes**
   pill section (rendered from the product's real `features` array),

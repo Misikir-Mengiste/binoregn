@@ -8,6 +8,9 @@ import type { Role } from "@/generated/prisma/client";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
+  // Accept non-localhost host headers (IP/domain) when running behind
+  // a proxy or direct server IP in production.
+  trustHost: true,
   // Credentials providers can't use database sessions — JWT is
   // required here, and it also means Google OAuth doesn't need the
   // Session table either (the adapter is still used for User /
