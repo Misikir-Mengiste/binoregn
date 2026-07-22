@@ -1,3 +1,10 @@
+# Pinned so the Compose project name never drifts from the folder name
+# ("affiliate marketplace" — the space gets sanitized differently across
+# Compose versions). This keeps `docker compose` bound to the existing
+# containers/volume (affiliatemarketplace_db_data) instead of creating a
+# second, empty stack that collides on port 5433.
+name: affiliatemarketplace
+
 services:
   db:
     image: postgres:17-alpine
