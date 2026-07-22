@@ -304,7 +304,12 @@ model Order {
   buyerName    String
   buyerPhone   String
   buyerAddress String
+  // City is required at checkout (validated in the app); nullable at the
+  // DB level so pre-existing orders migrate cleanly. buyerNotes and
+  // buyerEmail are the only optional buyer fields.
+  buyerCity    String?
   buyerEmail   String?
+  buyerNotes   String?
   quantity     Int           @default(1)
 
   deliveryStatus   OrderDeliveryStatus @default(PLACED)

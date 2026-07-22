@@ -9,15 +9,14 @@ import { cn } from "@/lib/utils";
 export function ProductPurchasePanel({
   orderHref,
   colors,
-  sizes,
+  showAddToCart,
 }: {
   orderHref: string;
   colors: string[];
-  sizes: string[];
+  showAddToCart: boolean;
 }) {
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState(colors[0] ?? "");
-  const [selectedSize, setSelectedSize] = useState(sizes[0] ?? "");
 
   const buyNowHref = useMemo(() => `${orderHref}?qty=${quantity}`, [orderHref, quantity]);
 
@@ -39,7 +38,7 @@ export function ProductPurchasePanel({
                   className={cn(
                     "h-11 w-11 rounded-[12px] border transition-shadow",
                     active
-                      ? "border-foreground ring-2 ring-foreground ring-offset-2"
+                      ? "border-teal-600 ring-2 ring-teal-600 ring-offset-2"
                       : "border-border",
                   )}
                   style={{ backgroundColor: color }}
@@ -50,37 +49,11 @@ export function ProductPurchasePanel({
         </div>
       )}
 
-      {sizes.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <p className="text-sm font-semibold text-foreground">Size</p>
-          <div className="flex flex-wrap gap-2">
-            {sizes.map((size) => {
-              const active = selectedSize === size;
-              return (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => setSelectedSize(size)}
-                  className={cn(
-                    "rounded-pill border px-4 py-1.5 text-xs font-semibold",
-                    active
-                      ? "border-foreground text-foreground"
-                      : "border-border text-ink-600",
-                  )}
-                >
-                  {size}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       <div className="flex items-center gap-3">
         <button
           type="button"
           aria-label="Decrease quantity"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] bg-foreground text-white transition-opacity hover:opacity-90"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-border bg-card text-ink-600 transition-colors hover:bg-surface-100"
           onClick={() => setQuantity((value) => Math.max(1, value - 1))}
         >
           <Minus className="h-4 w-4" />
@@ -91,28 +64,35 @@ export function ProductPurchasePanel({
         <button
           type="button"
           aria-label="Increase quantity"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] bg-foreground text-white transition-opacity hover:opacity-90"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-border bg-card text-ink-600 transition-colors hover:bg-surface-100"
           onClick={() => setQuantity((value) => Math.min(99, value + 1))}
         >
           <Plus className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          className={cn(
-            buttonVariants({ variant: "outline" }),
-            "h-12 w-full rounded-pill bg-card text-foreground",
-          )}
-        >
-          Add to Cart
-        </button>
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-3",
+          showAddToCart && "sm:grid-cols-2",
+        )}
+      >
+        {showAddToCart && (
+          <Link
+            href={buyNowHref}
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "h-12 w-full min-w-0 rounded-pill bg-card text-foreground",
+            )}
+          >
+            Add to Cart
+          </Link>
+        )}
         <Link
           href={buyNowHref}
           className={cn(
             buttonVariants(),
-            "h-12 w-full rounded-pill bg-foreground text-white hover:bg-foreground/90",
+            "h-12 w-full min-w-0 rounded-pill bg-teal-600 text-white hover:bg-teal-700",
           )}
         >
           Buy Now

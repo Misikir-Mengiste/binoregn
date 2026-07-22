@@ -16,6 +16,8 @@ type OrderRow = {
   buyerName: string;
   buyerPhone: string;
   buyerAddress: string;
+  buyerCity: string | null;
+  buyerNotes: string | null;
   deliveryStatus: string;
   fulfillmentStatus: string;
   cashReconciledAt: Date | null;
@@ -172,6 +174,7 @@ export function OrdersClient({ orders: allOrders }: { orders: OrderRow[] }) {
                     <p className="font-semibold text-foreground">Delivery address</p>
                     <p>{order.buyerName}</p>
                     <p>{order.buyerAddress}</p>
+                    {order.buyerCity ? <p>{order.buyerCity}</p> : null}
                   </div>
                   <div>
                     <p className="font-semibold text-foreground">Shipping updates</p>
@@ -179,6 +182,12 @@ export function OrdersClient({ orders: allOrders }: { orders: OrderRow[] }) {
                     <p>{order.buyerPhone}</p>
                   </div>
                 </div>
+                {order.buyerNotes ? (
+                  <div className="mt-3 rounded-[8px] border border-border bg-surface-100 px-3 py-2 text-xs text-ink-600">
+                    <span className="font-semibold text-foreground">Notes: </span>
+                    {order.buyerNotes}
+                  </div>
+                ) : null}
               </div>
 
               <div className="border-t border-border px-5 py-4">

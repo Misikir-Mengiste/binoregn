@@ -50,6 +50,15 @@ type ProductFormValues = {
   imageUrls: string[];
 };
 
+// Delivery Options values pre-filled when CREATING a product (admin can
+// edit per product). They feed the storefront's Delivery Options card so
+// new products ship with sensible, editable defaults instead of blanks.
+const DELIVERY_DEFAULTS = {
+  discountLabel: "Disc 15%",
+  deliveryTime: "3-4 Working Days",
+  returns: "7 Days easy return",
+};
+
 function toFormValues(product?: ProductWithExtras): ProductFormValues {
   return {
     name: product?.name ?? "",
@@ -59,7 +68,9 @@ function toFormValues(product?: ProductWithExtras): ProductFormValues {
     features: product?.features?.join("\n") ?? "",
     care: product?.care?.join("\n") ?? "",
     shipping: product?.shipping?.join("\n") ?? "",
-    returns: product?.returns?.join("\n") ?? "",
+    returns: product
+      ? product.returns?.join("\n") ?? ""
+      : DELIVERY_DEFAULTS.returns,
     colors: product?.colors?.join(", ") ?? "",
     sizes: product?.sizes?.join(", ") ?? "",
     priceBirr: product ? String(product.priceBirr) : "",
@@ -73,9 +84,13 @@ function toFormValues(product?: ProductWithExtras): ProductFormValues {
     sellerSoldCount: product?.sellerSoldCount
       ? String(product.sellerSoldCount)
       : "",
-    shippingDiscountLabel: product?.shippingDiscountLabel ?? "",
+    shippingDiscountLabel: product
+      ? product.shippingDiscountLabel ?? ""
+      : DELIVERY_DEFAULTS.discountLabel,
     shippingPackageLabel: product?.shippingPackageLabel ?? "",
-    shippingDeliveryTime: product?.shippingDeliveryTime ?? "",
+    shippingDeliveryTime: product
+      ? product.shippingDeliveryTime ?? ""
+      : DELIVERY_DEFAULTS.deliveryTime,
     shippingArrives: product?.shippingArrives ?? "",
     commissionBirr: product ? String(product.commissionBirr) : "",
     imageUrls: product?.imageUrls ?? [],

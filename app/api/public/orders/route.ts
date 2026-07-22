@@ -30,7 +30,9 @@ export async function POST(request: NextRequest) {
     buyerName,
     buyerPhone,
     buyerAddress,
+    buyerCity,
     buyerEmail,
+    buyerNotes,
     quantity,
   } = parsed.data;
 
@@ -51,7 +53,9 @@ export async function POST(request: NextRequest) {
       buyerName,
       buyerPhone,
       buyerAddress,
+      buyerCity,
       buyerEmail,
+      buyerNotes,
       quantity,
     },
     select: {

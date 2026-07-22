@@ -5,6 +5,82 @@ change.
 
 ## Current Phase
 
+- **2026-07-22 — Checkout city + notes fields; Add-to-Cart keys off
+  size/color.** Added `Order.buyerCity` (required in app, nullable in DB
+  for old rows) and `Order.buyerNotes` (optional) via `prisma db push`.
+  New `lib/ethiopian-cities.ts` (major cities + "Other"). Checkout
+  (`checkout-form.tsx`) gained a required **City** `<select>` and an
+  optional **Notes** `<textarea>`; validation (`lib/validations/order.ts`)
+  requires city, keeps email+notes optional; the public orders API stores
+  both. City/notes now surface in admin orders list, both invoices, and
+  the public tracking page. Separately, `showAddToCart` on the storefront
+  now = `product has sizes || colors` (was: recommendations exist).
+  Verified live: city dropdown + notes render, Add-to-Cart shows for a
+  sized/colored product. NOTE: order **submission** needs the user's dev
+  server restarted to load the regenerated Prisma client (new columns).
+  `tsc` clean; eslint clean except 2 pre-existing unused-import warnings
+  in orders-client.tsx.
+
+- **2026-07-22 — Add-to-Cart hidden when there are no recommendations.**
+  `product-purchase-panel.tsx` takes a `showAddToCart` prop; `page.tsx`
+  passes `recommendedLinks.length > 0`. When the creator has no other
+  products (no "More from this creator" section), Add-to-Cart is hidden
+  and Buy Now goes full-width; when recommendations exist, both buttons
+  show. Verified live (single-product creator → Buy Now only). `tsc` +
+  `eslint` clean.
+
+- **2026-07-22 — Storefront: seller card removed, creator-only
+  recommendations, functional Add-to-Cart.**
+  `app/(public)/p/[creator]/[slug]`: removed the seller/Follow card (and
+  its fabricated rating/sold/sellerName vars + unused Heart/Star imports).
+  Recommendations kept but retitled "More from this creator" — query is
+  already scoped to the same `creatorId` (never other creators, never the
+  creator's identity) and the section is hidden entirely when the creator
+  has no other links; cleaned the cards of the fake Heart/wishlist, fake
+  rating, and fabricated compare-at fallback, and gave each a real teal
+  "View product" CTA. Made "Add to Cart" functional: it's now a Link to
+  the COD checkout (`/order?qty=N`) with the selected quantity, same
+  destination as Buy Now (no multi-item cart exists in this MVP; flag if a
+  real cart is wanted). Verified live — seller card gone, recs hidden for
+  a single-product creator, both CTAs link to checkout. `tsc` + `eslint`
+  clean.
+
+- **2026-07-22 — Delivery Options values are now admin-editable defaults
+  set at product creation.** `app/admin/products/product-form.tsx`: added
+  a `DELIVERY_DEFAULTS` const and pre-fills the Discount (`shippingDiscountLabel`
+  = "Disc 15%"), Delivery Time (`shippingDeliveryTime` = "3-4 Working
+  Days"), and Return (`returns` = "7 Days easy return") fields **only on
+  create** (`product ? existing : default`), so editing an existing
+  product still shows its real stored values. These persist through the
+  already-wired API and feed the storefront Delivery Options card; the
+  storefront's own hardcoded fallbacks stay as a safety net for
+  pre-existing products with blank fields. `tsc` + `eslint` clean.
+
+- **2026-07-22 — Delivery Options card now always shows all four rows.**
+  `app/(public)/p/[creator]/[slug]/page.tsx`: rebuilt `deliveryItems` so
+  the card always renders Discount / Payment / Delivery Time / Return &
+  Warranty (2×2). Values prefer real data → admin `shipping` array →
+  platform-policy default (COD platform, so payment/delivery/returns are
+  uniform site-wide): Payment always "Cash on Delivery Available",
+  Delivery Time `shippingDeliveryTime ?? shipping[2] ?? "3–4 Working
+  Days"`, Return `returns[0] ?? "7 Days easy return"`. Discount shows a
+  real % only from a genuine `compareAtBirr`, else the admin discount
+  label / `shipping[0]`, else "No discount" (no fabricated percentage).
+  Icon tiles restyled to the reference's filled gray circles
+  (`bg-surface-100`, `text-foreground`). Verified live — all four rows
+  render; no console errors. `tsc` + `eslint` clean.
+
+- **2026-07-22 — Storefront right column: Main Notes → Size; teal CTA +
+  overflow fix.** `app/(public)/p/[creator]/[slug]`: removed the Main
+  Notes pill section and replaced it with a conditional **Size** pill
+  section (renders only when `product.sizes` is non-empty). Removed the
+  now-duplicate size selector (+ `sizes` prop) from
+  `product-purchase-panel.tsx`. Delivery Options card left unchanged.
+  Earlier same-day fix retained: Buy Now / swatch ring / active thumbnail
+  recolored to teal (design-system) and the Add-to-Cart/Buy-Now row moved
+  to a 2-col grid to stop the Buy Now button overflowing on large screens.
+  Verified live, no console errors. `tsc` + `eslint` clean.
+
 - **2026-07-22 — Added DB clear command.** Created
   `prisma/clear.ts` and wired `npm run clear` in `package.json` to
   wipe application tables (FK-safe delete order) when a full reset is

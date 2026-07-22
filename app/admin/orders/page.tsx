@@ -12,6 +12,8 @@ export default async function AdminOrdersPage() {
         buyerName: true,
         buyerPhone: true,
         buyerAddress: true,
+        buyerCity: true,
+        buyerNotes: true,
         deliveryStatus: true,
         fulfillmentStatus: true,
         cashReconciledAt: true,

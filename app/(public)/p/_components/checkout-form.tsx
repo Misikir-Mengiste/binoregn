@@ -6,6 +6,7 @@ import { CheckCircle2, Copy, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ETHIOPIAN_CITIES } from "@/lib/ethiopian-cities";
 
 export function CheckoutForm({
   affiliateLinkSlug,
@@ -18,8 +19,10 @@ export function CheckoutForm({
 }) {
   const [buyerName, setBuyerName] = useState("");
   const [buyerPhone, setBuyerPhone] = useState("");
+  const [buyerCity, setBuyerCity] = useState("");
   const [buyerAddress, setBuyerAddress] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
+  const [buyerNotes, setBuyerNotes] = useState("");
   const searchParams = useSearchParams();
   const initialQuantity = useMemo(() => {
     const raw = searchParams.get("qty");
@@ -50,7 +53,9 @@ export function CheckoutForm({
           buyerName,
           buyerPhone,
           buyerAddress,
+          buyerCity,
           buyerEmail: buyerEmail.trim() || undefined,
+          buyerNotes: buyerNotes.trim() || undefined,
           quantity,
         }),
       });
@@ -204,6 +209,25 @@ export function CheckoutForm({
               />
             </div>
             <div className="flex flex-col gap-1.5">
+              <Label htmlFor="buyerCity">City</Label>
+              <select
+                id="buyerCity"
+                required
+                value={buyerCity}
+                onChange={(event) => setBuyerCity(event.target.value)}
+                className="h-10 rounded-[8px] border border-border bg-card px-3 text-sm text-foreground outline-none"
+              >
+                <option value="" disabled>
+                  Select your city
+                </option>
+                {ETHIOPIAN_CITIES.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="buyerAddress">Delivery address</Label>
               <Input
                 id="buyerAddress"
@@ -225,6 +249,17 @@ export function CheckoutForm({
               <p className="text-xs text-ink-400">
                 We&apos;ll send a tracking link if you provide an email.
               </p>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="buyerNotes">Notes (optional)</Label>
+              <textarea
+                id="buyerNotes"
+                rows={3}
+                value={buyerNotes}
+                onChange={(event) => setBuyerNotes(event.target.value)}
+                placeholder="Delivery instructions, landmarks, preferred time…"
+                className="rounded-[8px] border border-border bg-card px-3 py-2 text-sm text-foreground outline-none placeholder:text-ink-400"
+              />
             </div>
           </div>
 

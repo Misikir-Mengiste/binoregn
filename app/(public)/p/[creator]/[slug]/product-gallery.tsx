@@ -34,7 +34,7 @@ export function ProductGallery({ images }: { images: string[] }) {
                 onClick={() => setActive(index)}
                 className={cn(
                   "aspect-square overflow-hidden rounded-[16px] border-2 bg-surface-100",
-                  index === active ? "border-foreground" : "border-transparent",
+                  index === active ? "border-teal-600" : "border-transparent",
                 )}
                 aria-label={`View image ${index + 1}`}
               >
