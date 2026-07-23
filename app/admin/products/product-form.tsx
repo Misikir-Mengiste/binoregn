@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent, type SubmitEvent } from "react";
+import { useRef, useState, type ChangeEvent, type SubmitEvent } from "react";
 import { ImagePlus, Plus, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,30 +98,18 @@ function toFormValues(product?: ProductWithExtras): ProductFormValues {
 }
 
 async function uploadImage(file: File): Promise<string> {
-  const sigResponse = await fetch("/api/admin/uploads/signature", {
-    method: "POST",
-  });
-  if (!sigResponse.ok) {
-    throw new Error("Could not get an upload signature");
-  }
-  const { data: sig } = await sigResponse.json();
-
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("api_key", sig.apiKey);
-  formData.append("timestamp", String(sig.timestamp));
-  formData.append("signature", sig.signature);
-  formData.append("folder", sig.folder);
 
-  const uploadResponse = await fetch(
-    `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
-    { method: "POST", body: formData },
-  );
-  const uploaded = await uploadResponse.json();
-  if (!uploadResponse.ok) {
-    throw new Error(uploaded?.error?.message ?? "Image upload failed");
+  const response = await fetch("/api/admin/uploads", {
+    method: "POST",
+    body: formData,
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(body?.error?.message ?? "Image upload failed");
   }
-  return uploaded.secure_url as string;
+  return body.data.url as string;
 }
 
 function FormCard({
@@ -156,6 +144,57 @@ export function ProductForm({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [imageUrlInput, setImageUrlInput] = useState("");
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  // Alternative to uploading a file: add a product image by pasting a URL.
+  function addImageUrl() {
+    const url = imageUrlInput.trim();
+    if (!url) return;
+    setValues((v) =>
+      v.imageUrls.includes(url)
+        ? v
+        : { ...v, imageUrls: [...v.imageUrls, url] },
+    );
+    setImageUrlInput("");
+  }
+
+  // Wrap the current textarea selection with markdown markers (or insert a
+  // placeholder if nothing is selected), then restore focus/selection.
+  function wrapSelection(before: string, after: string, placeholder: string) {
+    const el = descriptionRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const text = values.description;
+    const selected = text.slice(start, end) || placeholder;
+    const next =
+      text.slice(0, start) + before + selected + after + text.slice(end);
+    setValues((v) => ({ ...v, description: next }));
+    requestAnimationFrame(() => {
+      el.focus();
+      const cursor = start + before.length;
+      el.setSelectionRange(cursor, cursor + selected.length);
+    });
+  }
+
+  // Prefix every line touched by the selection with "- " for bullet lists.
+  function prefixSelectedLines(prefix: string) {
+    const el = descriptionRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const text = values.description;
+    const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+    const block = text.slice(lineStart, end);
+    const prefixed = block
+      .split("\n")
+      .map((line) => prefix + line)
+      .join("\n");
+    const next = text.slice(0, lineStart) + prefixed + text.slice(end);
+    setValues((v) => ({ ...v, description: next }));
+    requestAnimationFrame(() => el.focus());
+  }
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -275,6 +314,7 @@ export function ProductForm({
             </Label>
             <textarea
               id="description"
+              ref={descriptionRef}
               rows={8}
               className="w-full rounded-[8px] border border-input bg-transparent px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               value={values.description}
@@ -283,23 +323,43 @@ export function ProductForm({
               }
             />
             <div className="flex flex-wrap items-center gap-2 rounded-[8px] border border-border bg-surface-100 px-2.5 py-1 text-[11px] text-ink-400">
-              <span className="rounded-[6px] border border-border bg-card px-1.5 py-0.5 font-semibold text-ink-600">
+              <button
+                type="button"
+                onClick={() => wrapSelection("**", "**", "bold text")}
+                className="rounded-[6px] border border-border bg-card px-1.5 py-0.5 font-semibold text-ink-600 transition-colors hover:bg-surface-100"
+              >
                 B
-              </span>
-              <span className="rounded-[6px] border border-border bg-card px-1.5 py-0.5 font-medium italic text-ink-600">
+              </button>
+              <button
+                type="button"
+                onClick={() => wrapSelection("*", "*", "italic text")}
+                className="rounded-[6px] border border-border bg-card px-1.5 py-0.5 font-medium text-ink-600 italic transition-colors hover:bg-surface-100"
+              >
                 I
-              </span>
-              <span className="rounded-[6px] border border-border bg-card px-1.5 py-0.5 font-medium text-ink-600 underline">
+              </button>
+              <button
+                type="button"
+                onClick={() => wrapSelection("__", "__", "underlined text")}
+                className="rounded-[6px] border border-border bg-card px-1.5 py-0.5 font-medium text-ink-600 underline transition-colors hover:bg-surface-100"
+              >
                 U
-              </span>
-              <span className="rounded-[6px] border border-border bg-card px-2 py-0.5 text-ink-600">
+              </button>
+              <button
+                type="button"
+                onClick={() => wrapSelection("[", "](https://)", "link text")}
+                className="rounded-[6px] border border-border bg-card px-2 py-0.5 text-ink-600 transition-colors hover:bg-surface-100"
+              >
                 Link
-              </span>
-              <span className="rounded-[6px] border border-border bg-card px-2 py-0.5 text-ink-600">
+              </button>
+              <button
+                type="button"
+                onClick={() => prefixSelectedLines("- ")}
+                className="rounded-[6px] border border-border bg-card px-2 py-0.5 text-ink-600 transition-colors hover:bg-surface-100"
+              >
                 List
-              </span>
+              </button>
               <span className="ml-auto text-ink-400">
-                Formatting toolbar (preview)
+                Bold, italic, underline, links &amp; lists
               </span>
             </div>
           </div>
@@ -411,137 +471,19 @@ export function ProductForm({
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="rating" className="text-ink-600">
-                  Rating (0-5)
-                </Label>
-                <Input
-                  id="rating"
-                  type="number"
-                  step="0.1"
-                  min={0}
-                  max={5}
-                  className="h-10 rounded-[8px]"
-                  placeholder="Optional"
-                  value={values.rating}
-                  onChange={(e) =>
-                    setValues((v) => ({ ...v, rating: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="ratingCount" className="text-ink-600">
-                  Rating count
-                </Label>
-                <Input
-                  id="ratingCount"
-                  type="number"
-                  min={0}
-                  className="h-10 rounded-[8px]"
-                  placeholder="Optional"
-                  value={values.ratingCount}
-                  onChange={(e) =>
-                    setValues((v) => ({ ...v, ratingCount: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="soldCount" className="text-ink-600">
-                  Sold count
-                </Label>
-                <Input
-                  id="soldCount"
-                  type="number"
-                  min={0}
-                  className="h-10 rounded-[8px]"
-                  placeholder="Optional"
-                  value={values.soldCount}
-                  onChange={(e) =>
-                    setValues((v) => ({ ...v, soldCount: e.target.value }))
-                  }
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="sellerName" className="text-ink-600">
-                  Seller display name
-                </Label>
-                <Input
-                  id="sellerName"
-                  className="h-10 rounded-[8px]"
-                  placeholder="Binoregn"
-                  value={values.sellerName}
-                  onChange={(e) =>
-                    setValues((v) => ({ ...v, sellerName: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="sellerRating" className="text-ink-600">
-                  Seller rating
-                </Label>
-                <Input
-                  id="sellerRating"
-                  type="number"
-                  step="0.1"
-                  min={0}
-                  max={5}
-                  className="h-10 rounded-[8px]"
-                  placeholder="4.9"
-                  value={values.sellerRating}
-                  onChange={(e) =>
-                    setValues((v) => ({ ...v, sellerRating: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="sellerSoldCount" className="text-ink-600">
-                  Seller sold count
-                </Label>
-                <Input
-                  id="sellerSoldCount"
-                  type="number"
-                  min={0}
-                  className="h-10 rounded-[8px]"
-                  placeholder="1000"
-                  value={values.sellerSoldCount}
-                  onChange={(e) =>
-                    setValues((v) => ({
-                      ...v,
-                      sellerSoldCount: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  id="sellerVerified"
-                  type="checkbox"
-                  checked={values.sellerVerified}
-                  onChange={(e) =>
-                    setValues((v) => ({
-                      ...v,
-                      sellerVerified: e.target.checked,
-                    }))
-                  }
-                  className="h-4 w-4 rounded border-border"
-                />
-                <Label htmlFor="sellerVerified" className="text-ink-600">
-                  Verified seller badge
-                </Label>
-              </div>
-            </div>
           </FormCard>
 
-          <FormCard title="Shipping highlights">
+          <FormCard title="Delivery Options">
+            <p className="text-xs text-ink-400">
+              Shown in the Delivery Options card on the product page.
+              Pre-filled with defaults — edit per product if needed.
+            </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-ink-600">Discount label</Label>
+                <Label className="text-ink-600">Discount</Label>
                 <Input
                   className="h-10 rounded-[8px]"
-                  placeholder="50% off"
+                  placeholder="Disc 15%"
                   value={values.shippingDiscountLabel}
                   onChange={(e) =>
                     setValues((v) => ({
@@ -552,24 +494,19 @@ export function ProductForm({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-ink-600">Package label</Label>
+                <Label className="text-ink-600">Payment</Label>
                 <Input
-                  className="h-10 rounded-[8px]"
-                  placeholder="Regular"
-                  value={values.shippingPackageLabel}
-                  onChange={(e) =>
-                    setValues((v) => ({
-                      ...v,
-                      shippingPackageLabel: e.target.value,
-                    }))
-                  }
+                  className="h-10 rounded-[8px] bg-surface-100 text-ink-400"
+                  value="Cash on Delivery Available"
+                  readOnly
+                  disabled
                 />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label className="text-ink-600">Delivery time</Label>
                 <Input
                   className="h-10 rounded-[8px]"
-                  placeholder="3-4 working days"
+                  placeholder="3-4 Working Days"
                   value={values.shippingDeliveryTime}
                   onChange={(e) =>
                     setValues((v) => ({
@@ -580,16 +517,13 @@ export function ProductForm({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-ink-600">Arrives</Label>
+                <Label className="text-ink-600">Return &amp; Warranty</Label>
                 <Input
                   className="h-10 rounded-[8px]"
-                  placeholder="8-12 Oct 2026"
-                  value={values.shippingArrives}
+                  placeholder="7 Days easy return"
+                  value={values.returns}
                   onChange={(e) =>
-                    setValues((v) => ({
-                      ...v,
-                      shippingArrives: e.target.value,
-                    }))
+                    setValues((v) => ({ ...v, returns: e.target.value }))
                   }
                 />
               </div>
@@ -633,74 +567,37 @@ export function ProductForm({
                 </div>
               ))}
             </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-ink-600">Or add an image by URL</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="url"
+                  className="h-10 rounded-[8px]"
+                  placeholder="https://example.com/image.jpg"
+                  value={imageUrlInput}
+                  onChange={(e) => setImageUrlInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addImageUrl();
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 shrink-0 rounded-[8px] bg-card"
+                  onClick={addImageUrl}
+                >
+                  Add
+                </Button>
+              </div>
+              <p className="text-xs text-ink-400">
+                Paste a public image URL instead of uploading a file.
+              </p>
+            </div>
           </FormCard>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.35fr_1fr]">
-        <FormCard title="Features">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-ink-600">Feature list</Label>
-            <textarea
-              rows={6}
-              className="w-full rounded-[8px] border border-input bg-transparent px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              placeholder="- Multiple strap configurations"
-              value={values.features}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, features: e.target.value }))
-              }
-            />
-            <p className="text-xs text-ink-400">One feature per line.</p>
-          </div>
-        </FormCard>
-        <FormCard title="Care">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-ink-600">Care instructions</Label>
-            <textarea
-              rows={6}
-              className="w-full rounded-[8px] border border-input bg-transparent px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              placeholder="- Spot clean as needed"
-              value={values.care}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, care: e.target.value }))
-              }
-            />
-            <p className="text-xs text-ink-400">One instruction per line.</p>
-          </div>
-        </FormCard>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.35fr_1fr]">
-        <FormCard title="Shipping">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-ink-600">Shipping details</Label>
-            <textarea
-              rows={6}
-              className="w-full rounded-[8px] border border-input bg-transparent px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              placeholder="- Free shipping on orders over 500 Birr"
-              value={values.shipping}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, shipping: e.target.value }))
-              }
-            />
-            <p className="text-xs text-ink-400">One detail per line.</p>
-          </div>
-        </FormCard>
-        <FormCard title="Returns">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-ink-600">Returns policy</Label>
-            <textarea
-              rows={6}
-              className="w-full rounded-[8px] border border-input bg-transparent px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              placeholder="- Easy return requests"
-              value={values.returns}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, returns: e.target.value }))
-              }
-            />
-            <p className="text-xs text-ink-400">One policy per line.</p>
-          </div>
-        </FormCard>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}

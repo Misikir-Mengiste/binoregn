@@ -6,6 +6,16 @@ export default async function CreatorProductsPage() {
   const session = await auth();
   const creatorId = session!.user.id;
 
+  const creator = await prisma.user.findUnique({
+    where: { id: creatorId },
+    select: { creatorUsername: true, email: true },
+  });
+  // Same slug the Links page + storefront use for /p/[creator]/[slug].
+  const creatorSlug =
+    creator?.creatorUsername?.trim() ||
+    creator?.email?.split("@")[0] ||
+    "creator";
+
   const products = await prisma.product.findMany({
     orderBy: { createdAt: "desc" },
     select: {
@@ -58,6 +68,7 @@ export default async function CreatorProductsPage() {
   return (
     <CatalogClient
       products={catalog}
+      creatorSlug={creatorSlug}
       kpis={{ totalProducts: products.length }}
     />
   );

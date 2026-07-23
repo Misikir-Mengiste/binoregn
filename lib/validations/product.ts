@@ -1,10 +1,9 @@
 import { z } from "zod";
 
-// imageUrls takes URLs directly rather than handling upload —
-// there's no S3/Cloudinary integration wired up yet (see
-// doc/backend-api-plan.md Open Question 2). The DB only ever
-// stores references either way (architecture.md), so this
-// endpoint shape doesn't change once real upload exists.
+// imageUrls stores plain URL/path strings — either a local
+// `/uploads/...` path written by POST /api/admin/uploads, or an
+// external URL pasted by the admin. The DB only ever stores
+// references, never binaries (architecture.md).
 export const createProductSchema = z.object({
   name: z.string().trim().min(1).max(200),
   description: z.string().trim().max(5000).optional(),

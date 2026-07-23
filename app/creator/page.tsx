@@ -7,6 +7,7 @@ import {
   Eye,
   Link2,
   Sparkles,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { auth } from "@/auth";
@@ -329,7 +330,13 @@ export default async function CreatorOverviewPage() {
       </div>
 
       {/* Row 2: KPI cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <StatCard
+          icon={Wallet}
+          label="Lifetime earnings"
+          value={birr(totalEarned)}
+          tint="bg-teal-600 text-white"
+        />
         <StatCard
           icon={Clock}
           label="Pending earnings"

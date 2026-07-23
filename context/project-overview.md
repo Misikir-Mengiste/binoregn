@@ -74,7 +74,7 @@ Affiliate Marketplace is a single-seller platform where one admin lists physical
 - Next.js + TypeScript app with public, creator, and admin route groups
 - NextAuth passwordless auth for creators; seeded admin account
 - Prisma + PostgreSQL for products, creators, applications, affiliate links, orders, and commissions
-- Product image storage via S3-compatible bucket or Cloudinary
+- Product image storage on the local filesystem (`public/uploads/`), no third-party service
 - Manual order fulfillment and manual commission payout marking
 - Fixed Birr commissions and delivered-only commission trigger
 - Printable order invoice view for admin (non-tax receipt)

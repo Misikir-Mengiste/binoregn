@@ -17,13 +17,38 @@ const ICON: Record<CreatorNotification["type"], LucideIcon> = {
   WITHDRAWAL: Wallet,
 };
 
+const SEEN_KEY = "creator-notifications-seen";
+
 export function NotificationsBell({
   notifications,
 }: {
   notifications: CreatorNotification[];
 }) {
   const [open, setOpen] = useState(false);
+  const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // No read-state backend, so track which notifications have been seen in
+  // localStorage: the badge clears when the bell is opened and stays
+  // cleared across reloads until new activity arrives. Applied in a frame
+  // (after mount) so the server-rendered badge doesn't mismatch on hydrate.
+  useEffect(() => {
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem(SEEN_KEY);
+    } catch {
+      return;
+    }
+    if (!stored) return;
+    const frame = requestAnimationFrame(() => {
+      try {
+        setSeenIds(new Set(JSON.parse(stored) as string[]));
+      } catch {
+        // ignore malformed storage
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -46,21 +71,35 @@ export function NotificationsBell({
     };
   }, [open]);
 
-  const count = notifications.length;
+  const unseenCount = notifications.filter((n) => !seenIds.has(n.id)).length;
+
+  function toggleOpen() {
+    const next = !open;
+    setOpen(next);
+    if (next && unseenCount > 0) {
+      const ids = notifications.map((n) => n.id);
+      setSeenIds(new Set(ids));
+      try {
+        localStorage.setItem(SEEN_KEY, JSON.stringify(ids));
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }
 
   return (
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={toggleOpen}
         aria-label="Notifications"
         aria-expanded={open}
         className="relative flex h-9 w-9 items-center justify-center rounded-[8px] border border-border bg-card text-ink-600 transition-colors hover:bg-surface-100"
       >
         <Bell className="h-4 w-4" />
-        {count > 0 ? (
+        {unseenCount > 0 ? (
           <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-pill bg-teal-600 px-1 text-[10px] font-semibold text-white">
-            {count > 9 ? "9+" : count}
+            {unseenCount > 9 ? "9+" : unseenCount}
           </span>
         ) : null}
       </button>
@@ -73,7 +112,7 @@ export function NotificationsBell({
             </p>
           </div>
           <div className="max-h-[360px] overflow-y-auto">
-            {count === 0 ? (
+            {notifications.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
                 You&apos;re all caught up.
               </p>

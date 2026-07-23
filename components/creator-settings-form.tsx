@@ -121,10 +121,14 @@ export function CreatorSettingsForm({
             <Label htmlFor="username">Username</Label>
             <Input
               id="username"
-              className="h-11 rounded-[10px]"
+              readOnly
+              disabled
+              className="h-11 cursor-not-allowed rounded-[10px] bg-surface-100 text-ink-400"
               value={form.username}
-              onChange={(event) => updateField("username", event.target.value)}
             />
+            <p className="text-xs text-ink-400">
+              Your username can&apos;t be changed.
+            </p>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="phone">Phone number</Label>

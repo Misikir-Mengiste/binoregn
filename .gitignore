@@ -43,3 +43,6 @@ next-env.d.ts
 
 # prisma
 /generated/prisma
+
+# Locally uploaded product images (not committed)
+/public/uploads/

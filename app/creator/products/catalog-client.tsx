@@ -6,6 +6,7 @@ import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/search-input";
 import { StatusBadge } from "@/components/status-badge";
+import { CopyButton } from "@/components/copy-button";
 import { cn } from "@/lib/utils";
 
 type CatalogProduct = {
@@ -30,11 +31,11 @@ type CatalogProduct = {
 // Fixed Birr price buckets — only those with matching products are shown,
 // each with a real live count.
 const PRICE_BUCKETS = [
-  { key: "u500", label: "Below 500 Birr", min: 0, max: 499 },
-  { key: "500-1000", label: "500 – 1,000 Birr", min: 500, max: 1000 },
-  { key: "1000-2000", label: "1,000 – 2,000 Birr", min: 1000, max: 2000 },
-  { key: "2000-3000", label: "2,000 – 3,000 Birr", min: 2000, max: 3000 },
-  { key: "o3000", label: "Over 3,000 Birr", min: 3000, max: Infinity },
+  { key: "u500", label: "Below 500 ETB", min: 0, max: 499 },
+  { key: "500-1000", label: "500 – 1,000 ETB", min: 500, max: 1000 },
+  { key: "1000-2000", label: "1,000 – 2,000 ETB", min: 1000, max: 2000 },
+  { key: "2000-3000", label: "2,000 – 3,000 ETB", min: 2000, max: 3000 },
+  { key: "o3000", label: "Over 3,000 ETB", min: 3000, max: Infinity },
 ];
 
 function FilterSection({
@@ -124,9 +125,11 @@ function PriceRangeSlider({
 
 export function CatalogClient({
   products: allProducts,
+  creatorSlug,
   kpis,
 }: {
   products: CatalogProduct[];
+  creatorSlug: string;
   kpis: { totalProducts: number };
 }) {
   const router = useRouter();
@@ -494,14 +497,18 @@ export function CatalogClient({
                     </p>
                   )}
                   <div className="mt-3 flex items-center justify-between gap-2">
-                    <p className="text-[15px] font-bold text-foreground">
-                      {product.priceBirr.toLocaleString()} Birr
-                    </p>
+                    <div>
+                      <p className="text-[15px] font-bold text-foreground">
+                        {product.commissionBirr.toLocaleString()} ETB
+                      </p>
+                      <p className="text-[11px] text-ink-400">Your commission</p>
+                    </div>
                     <div onClick={(event) => event.stopPropagation()}>
-                      {product.applicationStatus === "APPROVED" ? (
-                        <span className="inline-flex w-fit items-center rounded-pill bg-teal-100 px-2.5 py-1 text-xs font-medium text-teal-700">
-                          +{product.commissionBirr} Birr
-                        </span>
+                      {product.applicationStatus === "APPROVED" &&
+                      product.affiliateLinkSlug ? (
+                        <CopyButton
+                          path={`/p/${creatorSlug}/${product.affiliateLinkSlug}`}
+                        />
                       ) : product.applicationStatus ? (
                         <StatusBadge status={product.applicationStatus} />
                       ) : (
@@ -596,11 +603,14 @@ export function CatalogClient({
                     {previewProduct.name}
                   </p>
                   <p className="text-lg font-bold text-foreground">
-                    {previewProduct.priceBirr.toLocaleString()} Birr
+                    {previewProduct.commissionBirr.toLocaleString()} ETB
+                    <span className="ml-1.5 text-xs font-medium text-ink-400">
+                      commission
+                    </span>
                   </p>
                   {previewProduct.applicationStatus === "APPROVED" ? (
                     <span className="w-fit rounded-pill bg-teal-100 px-2.5 py-1 text-xs font-medium text-teal-700">
-                      Earn {previewProduct.commissionBirr} Birr commission
+                      Approved · you earn on every completed order
                     </span>
                   ) : null}
                   {previewProduct.description && (

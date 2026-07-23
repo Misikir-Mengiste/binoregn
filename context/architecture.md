@@ -8,7 +8,7 @@
 | UI           | Tailwind CSS + shadcn/ui                           | Design-system tokens and reusable primitives (badges, cards, nav, forms) |
 | Auth         | NextAuth (Auth.js) — Google + Email/OTP providers  | Passwordless creator sign-in; admin is a fixed seeded account, not self-registered |
 | Database     | Prisma + PostgreSQL                                | Source of truth for products, creators, applications, affiliate links, orders, and commissions |
-| File storage | Cloudinary                                          | Product images uploaded by admin; DB stores URLs only |
+| File storage | Local filesystem (`public/uploads/`)                | Product images uploaded by admin; DB stores `/uploads/...` paths only |
 | Cache        | None (MVP)                                         | No Redis or application cache layer; read from PostgreSQL directly |
 | Background   | None (MVP)                                         | No queues, workers, webhooks, or scheduled jobs |
 
@@ -34,7 +34,7 @@
 | Store | What lives here | What does not |
 | ----- | --------------- | ------------- |
 | **PostgreSQL (via Prisma)** | Products (price, fixed Birr commission amount, category/subcategory, images, colors, sizes, features, care, shipping, returns), creators, applications + status, affiliate links (creator+product), orders + delivery status + fulfillment status + cash-reconciliation status + immutable creator attribution, commissions + pending/paid status | Binary files, session secrets as plaintext product data, computed UI-only state |
-| **File storage (Cloudinary)** | Product image binaries | Structured business records; commission or order state |
+| **File storage (`public/uploads/`)** | Product image binaries | Structured business records; commission or order state |
 | **Cache** | Nothing in MVP | Do not introduce a cache for auth, commissions, or inventory without updating this file |
 
 **Entities (relational source of truth):** Product, Creator, Application, AffiliateLink, Order, Commission. Implemented in `prisma/schema.prisma` — see that file's comments for field-level decisions not spelled out here (e.g. "Creator" and "Admin" are both a single `User` model distinguished by `role`, since NextAuth needs one identity model regardless of role; `Commission`'s "None" status is realized as "no row exists yet" rather than a stored enum value).
@@ -134,17 +134,20 @@ This keeps the auth boundary obvious per-path once auth exists.
 
 ## File Storage Implementation
 
-- **Cloudinary**, chosen over S3 for simpler setup and built-in
-  image transforms. `lib/cloudinary.ts` configures the SDK from
-  `CLOUDINARY_*` env vars and exposes `createUploadSignature()`.
-- `POST /api/admin/uploads/signature` (admin-only) returns a
-  short-lived signed-upload payload. The client uploads the image
-  bytes **directly to Cloudinary's API** with that signature — our
-  server never receives or proxies image binaries, matching the
-  storage-model rule that binaries never touch Postgres or this
-  app's own request/response bodies. The resulting `secure_url` is
-  then submitted as a plain string in `imageUrls` on
-  `POST`/`PATCH /api/admin/products`, same as before.
+- **Local filesystem, no third-party service.** Product image bytes
+  are written under `public/uploads/` (served statically by Next.js at
+  `/uploads/<name>`), and only the resulting `/uploads/...` path is
+  stored as a plain string in `imageUrls` — the DB still holds
+  references only, never binaries.
+- `POST /api/admin/uploads` (admin-only, `runtime = "nodejs"`) accepts
+  the image as multipart form data, validates type (JPG/PNG/WEBP/GIF)
+  and size (≤5MB), writes it to `public/uploads/`, and returns
+  `{ url }`. The admin product form posts the file there directly; the
+  returned URL is submitted in `imageUrls` on
+  `POST`/`PATCH /api/admin/products`. Admins can also paste an external
+  image URL instead of uploading.
+- `public/uploads/` is gitignored. On a containerized deploy, mount it
+  as a volume so uploaded images persist across restarts.
 
 ## Creator Payout Method
 

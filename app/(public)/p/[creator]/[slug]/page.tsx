@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Percent, RotateCcw, Truck, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { Markdown } from "@/components/markdown";
 import { ProductPurchasePanel } from "./product-purchase-panel";
 import { ProductGallery } from "./product-gallery";
 import { CollapsibleCard } from "./collapsible-card";
@@ -151,9 +152,10 @@ export default async function StorefrontPage({
 
             {product.description ? (
               <CollapsibleCard title="Description">
-                <p className="text-sm leading-relaxed text-ink-600">
-                  {product.description}
-                </p>
+                <Markdown
+                  text={product.description}
+                  className="space-y-2 text-sm leading-relaxed text-ink-600"
+                />
               </CollapsibleCard>
             ) : null}
 

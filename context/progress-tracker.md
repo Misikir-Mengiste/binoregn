@@ -5,6 +5,19 @@ change.
 
 ## Current Phase
 
+- **2026-07-23 — Cloudinary fully removed; images stored locally.**
+  Product image upload no longer uses any third-party service. Deleted
+  `lib/cloudinary.ts` and `POST /api/admin/uploads/signature`, uninstalled
+  the `cloudinary` npm package, and dropped `CLOUDINARY_*` from `.env` /
+  `.env.example`. Uploads now go to `POST /api/admin/uploads`
+  (`runtime="nodejs"`), which validates type/size and writes bytes to
+  `public/uploads/` (gitignored, served at `/uploads/<name>`); the admin
+  form posts the file there directly and can also paste an external image
+  URL. Updated `architecture.md` (File Storage Implementation + storage
+  tables), `project-overview.md`, and the `lib/validations/product.ts`
+  comment to match. `tsc` + `eslint` clean. Deploy note: mount
+  `public/uploads/` as a volume in containers so images persist.
+
 - **2026-07-22 — Re-restored `buyerCity` on order read pages.** Added
   `buyerCity` back into the select/render blocks on
   `app/(public)/order/[id]/page.tsx`,
