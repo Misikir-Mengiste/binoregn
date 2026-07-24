@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/search-input";
@@ -190,6 +190,19 @@ export function CatalogClient({
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
+
+  // Opens straight to a product's preview when arriving from the
+  // sidebar search (/creator/products?product=<id>). Adjusted during
+  // render (React's recommended pattern for syncing state from a
+  // changing prop) rather than in an effect, so a second search while
+  // already on this page still reopens the drawer.
+  const searchParams = useSearchParams();
+  const productParam = searchParams.get("product");
+  const [syncedProductParam, setSyncedProductParam] = useState(productParam);
+  if (productParam !== syncedProductParam) {
+    setSyncedProductParam(productParam);
+    if (productParam) setPreviewId(productParam);
+  }
 
   function toggleSetValue(
     setter: React.Dispatch<React.SetStateAction<Set<string>>>,

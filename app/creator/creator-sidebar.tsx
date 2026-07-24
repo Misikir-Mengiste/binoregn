@@ -8,13 +8,13 @@ import {
   ClipboardCheck,
   LayoutDashboard,
   Link2,
-  Search,
   Settings,
   Store,
   Wallet,
 } from "lucide-react";
 import { InitialsAvatar } from "@/components/initials-avatar";
 import { Logo } from "@/components/logo";
+import { SidebarSearch, type SidebarSearchItem } from "@/components/sidebar-search";
 import { cn } from "@/lib/utils";
 
 // Same shell as app/admin/admin-sidebar.tsx (sticky full-height,
@@ -30,6 +30,11 @@ const MAIN_NAV = [
   { href: "/creator/earnings", label: "Earnings", icon: Wallet },
 ];
 
+const SEARCH_ITEMS: SidebarSearchItem[] = [
+  ...MAIN_NAV.map((item) => ({ href: item.href, label: item.label })),
+  { href: "/creator/settings", label: "Settings" },
+];
+
 export function CreatorSidebar({
   email,
   onNavigate,
@@ -42,24 +47,12 @@ export function CreatorSidebar({
 
   return (
     <nav className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col border-r border-border bg-card">
-      <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
-        <Logo className="h-8" />
+      <div className="flex items-center gap-2.5 px-5 pt-6 pb-5">
+        <Logo className="h-10" />
       </div>
 
       <div className="px-4 pb-5">
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
-          <input
-            type="search"
-            placeholder="Search…"
-            readOnly
-            className="h-9 w-full rounded-[8px] border border-border bg-surface-100 pr-14 pl-9 text-xs text-ink-600 outline-none placeholder:text-ink-400"
-            aria-label="Search"
-          />
-          <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 rounded border border-border bg-card px-1.5 py-0.5 text-[10px] font-medium text-ink-400">
-            ⌘S
-          </span>
-        </div>
+        <SidebarSearch items={SEARCH_ITEMS} searchUrl="/api/creator/search" />
       </div>
 
       <div className="flex-1 overflow-y-auto px-3">
