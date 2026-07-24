@@ -110,7 +110,7 @@ export default async function StorefrontPage({
         ? `Disc ${discountPercent}%`
         : product.shippingDiscountLabel ?? product.shipping[0] ?? "No discount",
     },
-    { icon: Wallet, label: "Payment", value: "Cash on Delivery Available" },
+    { icon: Wallet, label: "Payment", value: "Cash on Delivery " },
     {
       icon: Truck,
       label: "Delivery Time",

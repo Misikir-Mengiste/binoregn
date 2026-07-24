@@ -414,7 +414,7 @@ export function ProductForm({
                 <Label className="text-ink-600">Payment</Label>
                 <Input
                   className="h-10 rounded-[8px] bg-surface-100 text-ink-400"
-                  value="Cash on Delivery Available"
+                  value="Cash on Delivery "
                   readOnly
                   disabled
                 />

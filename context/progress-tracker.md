@@ -118,7 +118,7 @@ change.
   the card always renders Discount / Payment / Delivery Time / Return &
   Warranty (2×2). Values prefer real data → admin `shipping` array →
   platform-policy default (COD platform, so payment/delivery/returns are
-  uniform site-wide): Payment always "Cash on Delivery Available",
+  uniform site-wide): Payment always "Cash on Delivery",
   Delivery Time `shippingDeliveryTime ?? shipping[2] ?? "3–4 Working
   Days"`, Return `returns[0] ?? "7 Days easy return"`. Discount shows a
   real % only from a genuine `compareAtBirr`, else the admin discount
