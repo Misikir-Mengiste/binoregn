@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type SubmitEvent } from "react";
-import type { KeyboardEvent } from "react";
+import type { ClipboardEvent, KeyboardEvent } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ import { Mail, MoveRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BrandMark } from "@/components/logo";
 
 type CodeStep = "email" | "code";
 type Variant = "sign-in" | "sign-up";
@@ -71,6 +72,15 @@ export function AuthEntry({ variant }: { variant: Variant }) {
     await requestCode();
   }
 
+  // Resend clears the old digits (and the error) and re-focuses the first
+  // box before requesting a fresh code.
+  async function handleResend() {
+    setCode("");
+    setError(null);
+    codeRefs.current[0]?.focus();
+    await requestCode();
+  }
+
   async function handleVerifyCode(event: SubmitEvent) {
     event.preventDefault();
     setError(null);
@@ -110,6 +120,21 @@ export function AuthEntry({ variant }: { variant: Variant }) {
     codeRefs.current[nextIndex]?.focus();
   }
 
+  // maxLength={1} truncates a pasted code on `onChange`, so distribute the
+  // pasted digits across the boxes here instead.
+  function handleCodePaste(index: number, event: ClipboardEvent<HTMLInputElement>) {
+    const digits = event.clipboardData.getData("text").replace(/\D/g, "");
+    if (!digits) return;
+    event.preventDefault();
+    const next = code.split("");
+    for (let offset = 0; offset < digits.length && index + offset < 6; offset += 1) {
+      next[index + offset] = digits[offset];
+    }
+    setCode(next.join(""));
+    const nextIndex = Math.min(index + digits.length, 5);
+    codeRefs.current[nextIndex]?.focus();
+  }
+
   function handleCodeKeyDown(index: number, event: KeyboardEvent) {
     if (event.key !== "Backspace") return;
     if (codeSlots[index]) return;
@@ -118,8 +143,21 @@ export function AuthEntry({ variant }: { variant: Variant }) {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-6 py-10">
-      <div className="w-full max-w-sm rounded-lg bg-card px-6 py-8 shadow-card">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 py-10">
+      {/* Branded background — brand gradient + soft blurred color blobs. */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-teal-100 via-surface-100 to-blue-100" />
+      <div className="pointer-events-none absolute -left-24 top-4 -z-10 h-72 w-72 rounded-full bg-teal-400/25 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 bottom-4 -z-10 h-80 w-80 rounded-full bg-blue-400/25 blur-3xl" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-200/30 blur-3xl" />
+
+      <Link href="/" className="mb-6 flex items-center gap-2.5">
+        <BrandMark className="h-9 w-9 text-sm" />
+        <span className="text-[16px] font-bold text-foreground">
+          Binoregn<span className="text-teal-600">.</span>
+        </span>
+      </Link>
+
+      <div className="relative w-full max-w-sm rounded-[18px] border border-white/60 bg-card/90 px-6 py-8 shadow-card backdrop-blur">
         {codeStep === "code" ? (
           <div className="flex flex-col gap-6">
             <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-teal-100 text-teal-700">
@@ -146,6 +184,7 @@ export function AuthEntry({ variant }: { variant: Variant }) {
                     value={slot}
                     onChange={(event) => updateCode(index, event.target.value)}
                     onKeyDown={(event) => handleCodeKeyDown(index, event)}
+                    onPaste={(event) => handleCodePaste(index, event)}
                     className="h-12 w-12 rounded-[12px] border border-border text-center text-base font-semibold text-foreground outline-none focus:border-teal-600"
                     aria-label={`Digit ${index + 1}`}
                   />
@@ -170,7 +209,7 @@ export function AuthEntry({ variant }: { variant: Variant }) {
               <button
                 type="button"
                 className="text-sm text-ink-600 underline underline-offset-2"
-                onClick={requestCode}
+                onClick={handleResend}
                 disabled={loading}
               >
                 Resend code

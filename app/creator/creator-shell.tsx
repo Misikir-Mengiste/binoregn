@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { CreatorSidebar } from "./creator-sidebar";
 import { NotificationsBell } from "./notifications-bell";
+import { BrandMark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { CreatorNotification } from "@/lib/creator-notifications";
@@ -37,11 +38,9 @@ export function CreatorShell({
               >
                 <Menu className="h-4 w-4" />
               </Button>
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white">
-                A
-              </div>
+              <BrandMark className="h-9 w-9 text-sm" />
               <span className="text-sm font-semibold text-foreground">
-                Affiliate Market
+                Binoregn<span className="text-teal-600">.</span>
               </span>
             </div>
             <div className="hidden lg:block" />

@@ -5,6 +5,34 @@ change.
 
 ## Current Phase
 
+- **2026-07-23 — Rebranded to Binoregn (logo, favicon, footer).** New
+  `components/logo.tsx` (`BrandMark` = teal rounded "B" square recreating
+  the app icon; `Wordmark`). Swapped the old "A"/ShoppingBag marks +
+  "Affiliate Market(place)" text for the BrandMark + "Binoregn." wordmark
+  across both sidebars, both mobile shells, both invoice pages, and the
+  landing nav. Added `app/icon.svg` (teal "B" square) as the favicon and
+  updated `app/layout.tsx` metadata title/description. Rebuilt the landing
+  footer as a dark section with brand + link columns (Product/Account/
+  Company), a CTA, copyright, and a giant low-opacity "Binoregn" wordmark
+  watermark. Also rebranded user-facing email subjects (`lib/mailer.ts`)
+  and `SMTP_FROM`. `tsc` + `eslint` clean. Note: BrandMark is a
+  teal-square/white-"B" recreation (the raster logo image wasn't a repo
+  asset); drop in the real SVG/PNG later if preferred.
+
+- **2026-07-23 — Landing page (`app/page.tsx`) fully rebuilt in an
+  Aeline-style layout, content adapted from Awin's creator/influencer
+  affiliate messaging.** New sections: gradient hero (headline + CTA pill
+  + honest trust line + an earnings preview panel, no stock photo), an
+  overlapping bento row, a positioning statement with inline icon accents,
+  a 4-card stat row (light/lime/dark tones), a feature strip (replaces the
+  fake logo row), How-it-works (the real 4 steps), a For-creators value
+  section, a gradient final-CTA, and footer. Palette matches the
+  reference (blue hero, lime `#c9f24a` accent, dark `#0f1115` cards).
+  Held to the project's no-fabricated-credibility rule: **no fake
+  ratings/user counts/brand logos** — every stat is a real product fact
+  (0 Birr fees, 100% transparent, fixed commission, one dashboard). CTAs
+  point to /sign-up and /sign-in. `tsc` + `eslint` clean.
+
 - **2026-07-23 — Cloudinary fully removed; images stored locally.**
   Product image upload no longer uses any third-party service. Deleted
   `lib/cloudinary.ts` and `POST /api/admin/uploads/signature`, uninstalled

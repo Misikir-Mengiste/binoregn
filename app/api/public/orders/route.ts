@@ -70,8 +70,14 @@ export async function POST(request: NextRequest) {
   const proto = request.headers.get("x-forwarded-proto") ?? "http";
   const trackingUrl = host ? `${proto}://${host}/order/${order.id}` : null;
 
+  // The order is already created — a failed tracking email must never
+  // fail the checkout response.
   if (buyerEmail && trackingUrl) {
-    await sendOrderTrackingEmail(buyerEmail, trackingUrl);
+    try {
+      await sendOrderTrackingEmail(buyerEmail, trackingUrl);
+    } catch (error) {
+      console.error("[orders] failed to send tracking email:", error);
+    }
   }
 
   return apiSuccess(

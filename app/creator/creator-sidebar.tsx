@@ -14,6 +14,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { InitialsAvatar } from "@/components/initials-avatar";
+import { BrandMark } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
 // Same shell as app/admin/admin-sidebar.tsx (sticky full-height,
@@ -42,11 +43,9 @@ export function CreatorSidebar({
   return (
     <nav className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col border-r border-border bg-card">
       <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white">
-          A
-        </div>
+        <BrandMark className="h-9 w-9 text-sm" />
         <span className="truncate text-[15px] font-bold text-foreground">
-          Affiliate Market
+          Binoregn<span className="text-teal-600">.</span>
         </span>
       </div>
 

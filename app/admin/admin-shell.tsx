@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { AdminSidebar } from "./admin-sidebar";
+import { BrandMark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -19,11 +20,9 @@ export function AdminShell({
     <div className="min-h-screen bg-surface-100">
       <div className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 lg:hidden">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white">
-            A
-          </div>
+          <BrandMark className="h-9 w-9 text-sm" />
           <span className="text-sm font-semibold text-foreground">
-            Affiliate Market
+            Binoregn<span className="text-teal-600">.</span>
           </span>
         </div>
         <Button

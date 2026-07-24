@@ -18,7 +18,7 @@ export async function sendOtpEmail(email: string, code: string) {
   await transporter.sendMail({
     from: process.env.SMTP_FROM,
     to: email,
-    subject: "Your Affiliate Marketplace sign-in code",
+    subject: "Your Binoregn sign-in code",
     text: `Your sign-in code is ${code}. It expires in 10 minutes.`,
   });
 }
@@ -27,7 +27,7 @@ export async function sendOrderTrackingEmail(email: string, trackingUrl: string)
   await transporter.sendMail({
     from: process.env.SMTP_FROM,
     to: email,
-    subject: "Your Affiliate Marketplace order tracking link",
+    subject: "Your Binoregn order tracking link",
     text: `Track your order progress here: ${trackingUrl}`,
   });
 }

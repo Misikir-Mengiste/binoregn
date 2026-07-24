@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
+import { BrandMark } from "@/components/logo";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { InvoiceActions } from "./invoice-actions";
@@ -75,12 +76,10 @@ export default async function CreatorOrderInvoicePage({
       <section className="rounded-[16px] border border-border bg-card p-6 shadow-card print:border-transparent print:shadow-none sm:p-8">
         <div className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white">
-              A
-            </div>
+            <BrandMark className="h-11 w-11 text-base" />
             <div>
               <p className="text-sm font-semibold text-foreground">
-                Affiliate Marketplace
+                Binoregn
               </p>
               <p className="text-xs text-ink-400">Order invoice</p>
             </div>

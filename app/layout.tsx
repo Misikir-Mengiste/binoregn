@@ -8,9 +8,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Affiliate Marketplace",
+  title: "Binoregn — affiliate marketplace for creators",
   description:
-    "Earn a fixed commission on every delivered order you refer.",
+    "Turn your influence into affiliate income. Promote products, share your link, and earn a fixed commission on every delivered order.",
 };
 
 export default function RootLayout({

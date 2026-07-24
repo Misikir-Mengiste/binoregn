@@ -24,7 +24,16 @@ export async function POST(request: NextRequest) {
   const { email } = parsed.data;
   const code = generateOtpCode();
   await storeOtpCode(email, code);
-  await sendOtpEmail(email, code);
+
+  // Email delivery must not block sign-in: the code is already stored, so
+  // a transient/misconfigured SMTP failure shouldn't 500 the request and
+  // trap the user on the email step (in dev the 000000 bypass still
+  // works). Log it for the operator instead.
+  try {
+    await sendOtpEmail(email, code);
+  } catch (error) {
+    console.error("[request-otp] failed to send OTP email:", error);
+  }
 
   // Always return the same response regardless of whether this
   // email already has an account — nothing here should let a
