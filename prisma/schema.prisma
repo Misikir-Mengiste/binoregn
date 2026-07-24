@@ -98,6 +98,12 @@ model User {
   image         String?
   role          Role      @default(CREATOR)
   createdAt     DateTime  @default(now())
+  // Admin "delete" on a creator account is a deactivation, not a hard
+  // delete — a creator typically has Orders/Commissions/Withdrawals
+  // tied to it via required FKs, which a real delete would break.
+  // Deactivated creators are blocked from signing in (see auth.ts).
+  isActive      Boolean   @default(true)
+  deactivatedAt DateTime?
 
   // Payout destination — set by the creator via
   // PATCH /api/creator/payout-method, read by admin on the
@@ -233,6 +239,10 @@ model Application {
   status    ApplicationStatus @default(PENDING)
   createdAt DateTime          @default(now())
   decidedAt DateTime?
+  // Admin "delete" is a soft delete — architecture.md invariant 3 ties
+  // AffiliateLink creation to an Application's approval, so the row must
+  // keep existing even once hidden from the admin list.
+  deletedAt DateTime?
 
   affiliateLink AffiliateLink?
 
@@ -311,6 +321,10 @@ model Order {
   buyerEmail   String?
   buyerNotes   String?
   quantity     Int           @default(1)
+  // Buyer's selected variant, chosen from product.colors/product.sizes at
+  // checkout. Null when the product doesn't define that dimension.
+  color        String?
+  size         String?
 
   deliveryStatus   OrderDeliveryStatus @default(PLACED)
   fulfillmentStatus OrderFulfillmentStatus @default(PLACED)
@@ -320,6 +334,11 @@ model Order {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  // Admin "delete" is a soft delete — an Order is a financial/audit
+  // record (architecture.md invariant 4: status changes only through
+  // explicit admin actions) and may already have a Commission tied to
+  // it, so the row is never actually dropped.
+  deletedAt DateTime?
 
   commission Commission?
 }
@@ -353,6 +372,10 @@ model Commission {
   status     CommissionStatus @default(PENDING)
   createdAt  DateTime         @default(now())
   paidAt     DateTime?
+  // Admin "delete" is a soft delete — Commission is a financial ledger
+  // (architecture.md invariant 2: forward-only None→Pending→Paid), so a
+  // hard delete would erase money owed/paid history.
+  deletedAt  DateTime?
 }
 
 model Withdrawal {
@@ -367,4 +390,8 @@ model Withdrawal {
   status       WithdrawalStatus @default(PENDING)
   createdAt    DateTime         @default(now())
   decidedAt    DateTime?
+  // Admin "delete" is a soft delete — a Withdrawal is a payout request
+  // record (architecture.md invariant 10: pending until approved or
+  // rejected), so the row stays for audit purposes even once hidden.
+  deletedAt    DateTime?
 }

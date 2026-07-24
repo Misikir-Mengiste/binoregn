@@ -14,6 +14,11 @@ export const createOrderSchema = z.object({
   buyerEmail: z.string().trim().email().optional(),
   buyerNotes: z.string().trim().max(1000).optional(),
   quantity: z.number().int().min(1).max(99).default(1),
+  // Required only when the product actually defines that dimension —
+  // validated against product.colors/product.sizes server-side, since
+  // the client can't be trusted to send one of the real options.
+  color: z.string().trim().max(60).optional(),
+  size: z.string().trim().max(30).optional(),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;

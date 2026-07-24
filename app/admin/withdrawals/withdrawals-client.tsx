@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
 import { StatusBadge } from "@/components/status-badge";
+import { DeleteButton } from "@/components/delete-button";
 
 type WithdrawalRow = {
   id: string;
@@ -69,6 +70,17 @@ export function WithdrawalsClient({ withdrawals }: { withdrawals: WithdrawalRow[
     } finally {
       setLoadingId(null);
     }
+  }
+
+  async function deleteWithdrawal(id: string) {
+    const response = await fetch(`/api/admin/withdrawals/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.error?.message ?? "Could not delete the withdrawal");
+    }
+    router.refresh();
   }
 
   return (
@@ -138,6 +150,10 @@ export function WithdrawalsClient({ withdrawals }: { withdrawals: WithdrawalRow[
                       >
                         Reject
                       </Button>
+                      <DeleteButton
+                        label="Delete withdrawal"
+                        onDelete={() => deleteWithdrawal(withdrawal.id)}
+                      />
                     </div>
                   </td>
                 </tr>

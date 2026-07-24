@@ -9,16 +9,24 @@ import { cn } from "@/lib/utils";
 export function ProductPurchasePanel({
   orderHref,
   colors,
+  sizes,
   showAddToCart,
 }: {
   orderHref: string;
   colors: string[];
+  sizes: string[];
   showAddToCart: boolean;
 }) {
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState(colors[0] ?? "");
+  const [selectedSize, setSelectedSize] = useState(sizes[0] ?? "");
 
-  const buyNowHref = useMemo(() => `${orderHref}?qty=${quantity}`, [orderHref, quantity]);
+  const buyNowHref = useMemo(() => {
+    const params = new URLSearchParams({ qty: String(quantity) });
+    if (selectedColor) params.set("color", selectedColor);
+    if (selectedSize) params.set("size", selectedSize);
+    return `${orderHref}?${params.toString()}`;
+  }, [orderHref, quantity, selectedColor, selectedSize]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -43,6 +51,33 @@ export function ProductPurchasePanel({
                   )}
                   style={{ backgroundColor: color }}
                 />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {sizes.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm font-semibold text-foreground">Size</p>
+          <div className="flex flex-wrap gap-2.5">
+            {sizes.map((size) => {
+              const active = selectedSize === size;
+              return (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => setSelectedSize(size)}
+                  aria-pressed={active}
+                  className={cn(
+                    "rounded-pill border px-4 py-2 text-sm transition-colors",
+                    active
+                      ? "border-teal-600 bg-teal-600 text-white"
+                      : "border-border bg-card text-ink-600",
+                  )}
+                >
+                  {size}
+                </button>
               );
             })}
           </div>

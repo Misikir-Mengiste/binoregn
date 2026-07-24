@@ -156,25 +156,10 @@ export default async function StorefrontPage({
               </CollapsibleCard>
             ) : null}
 
-            {product.sizes.length > 0 && (
-              <div className="flex flex-col gap-3">
-                <p className="text-base font-bold text-foreground">Size</p>
-                <div className="flex flex-wrap gap-2.5">
-                  {product.sizes.map((size) => (
-                    <span
-                      key={size}
-                      className="rounded-pill border border-border bg-card px-4 py-2 text-sm text-ink-600"
-                    >
-                      {size}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <ProductPurchasePanel
               orderHref={`/p/${creator}/${affiliateLink.slug}/order`}
               colors={product.colors}
+              sizes={product.sizes}
               showAddToCart={
                 product.sizes.length > 0 || product.colors.length > 0
               }

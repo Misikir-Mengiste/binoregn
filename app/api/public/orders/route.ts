@@ -34,15 +34,30 @@ export async function POST(request: NextRequest) {
     buyerEmail,
     buyerNotes,
     quantity,
+    color,
+    size,
   } = parsed.data;
 
   const affiliateLink = await prisma.affiliateLink.findUnique({
     where: { slug: affiliateLinkSlug },
-    select: { id: true, productId: true, creatorId: true },
+    select: {
+      id: true,
+      productId: true,
+      creatorId: true,
+      product: { select: { colors: true, sizes: true } },
+    },
   });
 
   if (!affiliateLink) {
     return apiError("Link not found", 404);
+  }
+
+  const { colors, sizes } = affiliateLink.product;
+  if (colors.length > 0 && (!color || !colors.includes(color))) {
+    return apiError("Please select a valid color", 400);
+  }
+  if (sizes.length > 0 && (!size || !sizes.includes(size))) {
+    return apiError("Please select a valid size", 400);
   }
 
   const order = await prisma.order.create({
@@ -57,6 +72,8 @@ export async function POST(request: NextRequest) {
       buyerEmail,
       buyerNotes,
       quantity,
+      color: colors.length > 0 ? color : undefined,
+      size: sizes.length > 0 ? size : undefined,
     },
     select: {
       id: true,

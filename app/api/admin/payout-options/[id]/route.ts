@@ -35,3 +35,21 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   return apiSuccess(updated);
 }
+
+// Pure reference data (bank/wallet names) with no FK relations pointing
+// at it — payoutBankName on User/Withdrawal is a plain string snapshot,
+// not a foreign key — so a hard delete is safe at any time.
+export async function DELETE(_request: NextRequest, context: RouteContext) {
+  const authed = await requireAdmin();
+  if (authed instanceof Response) return authed;
+
+  const { id } = await context.params;
+  const option = await prisma.payoutOption.findUnique({ where: { id } });
+  if (!option) {
+    return apiError("Payout option not found", 404);
+  }
+
+  await prisma.payoutOption.delete({ where: { id } });
+
+  return apiSuccess({ id });
+}

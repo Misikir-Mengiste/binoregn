@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, MoreHorizontal, Plus, X } from "lucide-react";
+import { Eye, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
 import { TableToolbar } from "@/components/table-toolbar";
 import { Pagination } from "@/components/pagination";
+import { DeleteButton } from "@/components/delete-button";
 import type { Product } from "@/generated/prisma/client";
 import { ProductForm } from "./product-form";
 
@@ -60,6 +61,17 @@ export function ProductsClient({
   function handleSuccess() {
     setCreating(false);
     setEditingId(null);
+    router.refresh();
+  }
+
+  async function deleteProduct(id: string) {
+    const response = await fetch(`/api/admin/products/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.error?.message ?? "Could not delete the product");
+    }
     router.refresh();
   }
 
@@ -230,16 +242,12 @@ export function ProductsClient({
                   >
                     Edit
                   </Button>
-                  <button
-                    type="button"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-border bg-card text-ink-400"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setEditingId(product.id);
-                    }}
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
+                  <div onClick={(event) => event.stopPropagation()}>
+                    <DeleteButton
+                      label="Delete product"
+                      onDelete={() => deleteProduct(product.id)}
+                    />
+                  </div>
                 </div>
               </div>
             ))}

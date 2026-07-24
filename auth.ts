@@ -63,6 +63,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
+    // Blocks sign-in for deactivated creators (admin "delete" — see
+    // app/api/admin/creators/[id]/route.ts). Runs for both providers,
+    // after the adapter has resolved/created the user row, so a
+    // missing row here just means "new user, not deactivated."
+    async signIn({ user }) {
+      if (!user.email) return false;
+      const dbUser = await prisma.user.findUnique({
+        where: { email: user.email },
+        select: { isActive: true },
+      });
+      if (dbUser?.isActive === false) return false;
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;

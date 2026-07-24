@@ -525,14 +525,14 @@ export function CatalogClient({
                         <div className="aspect-square w-full bg-teal-100" />
                       )}
                     </div>
-                    <h3 className="mt-3 text-sm font-semibold text-foreground">
+                    <h3 className="mt-3 text-xs font-semibold text-foreground sm:text-sm">
                       {product.name}
                     </h3>
                     <div className="mt-2 flex items-baseline justify-between gap-2">
-                      <p className="text-base font-bold text-foreground">
+                      <p className="text-sm font-bold text-foreground sm:text-base">
                         ETB {product.priceBirr.toLocaleString()}
                       </p>
-                      <p className="text-sm font-semibold text-teal-600">
+                      <p className="text-xs font-semibold text-teal-600 sm:text-sm">
                         +ETB {product.commissionBirr.toLocaleString()}
                       </p>
                     </div>

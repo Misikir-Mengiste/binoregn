@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { TableToolbar } from "@/components/table-toolbar";
 import { Pagination } from "@/components/pagination";
 import { InitialsAvatar } from "@/components/initials-avatar";
+import { DeleteButton } from "@/components/delete-button";
 
 type ApplicationRow = {
   id: string;
@@ -71,6 +72,17 @@ export function ApplicationsClient({
     } finally {
       setPendingId(null);
     }
+  }
+
+  async function deleteApplication(id: string) {
+    const response = await fetch(`/api/admin/applications/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.error?.message ?? "Could not delete the application");
+    }
+    router.refresh();
   }
 
   return (
@@ -182,6 +194,10 @@ export function ApplicationsClient({
                         </Button>
                       </>
                     )}
+                    <DeleteButton
+                      label="Delete application"
+                      onDelete={() => deleteApplication(application.id)}
+                    />
                   </div>
                 </td>
               </tr>

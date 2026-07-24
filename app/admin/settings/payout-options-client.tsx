@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/page-header";
+import { DeleteButton } from "@/components/delete-button";
 
 type PayoutOption = {
   id: string;
@@ -20,12 +21,14 @@ function OptionSection({
   category,
   options,
   onCreated,
+  onDeleted,
 }: {
   title: string;
   description: string;
   category: "BANK" | "WALLET";
   options: PayoutOption[];
   onCreated: (option: PayoutOption) => void;
+  onDeleted: (id: string) => void;
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -79,6 +82,18 @@ function OptionSection({
     }
   }
 
+  async function deleteOption(id: string) {
+    const response = await fetch(`/api/admin/payout-options/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.error?.message ?? "Could not delete this option");
+    }
+    onDeleted(id);
+    router.refresh();
+  }
+
   return (
     <section className="overflow-hidden rounded-[10px] border border-border bg-card shadow-card">
       <header className="border-b border-border px-5 py-3.5">
@@ -110,20 +125,26 @@ function OptionSection({
                 {option.name}
               </p>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 rounded-[8px] bg-card"
-              disabled={togglingId === option.id}
-              onClick={() => toggleActive(option)}
-            >
-              {togglingId === option.id
-                ? "Saving…"
-                : option.isActive
-                  ? "Deactivate"
-                  : "Activate"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 rounded-[8px] bg-card"
+                disabled={togglingId === option.id}
+                onClick={() => toggleActive(option)}
+              >
+                {togglingId === option.id
+                  ? "Saving…"
+                  : option.isActive
+                    ? "Deactivate"
+                    : "Activate"}
+              </Button>
+              <DeleteButton
+                label="Delete option"
+                onDelete={() => deleteOption(option.id)}
+              />
+            </div>
           </div>
         ))}
         {options.length === 0 && (
@@ -187,6 +208,7 @@ export function PayoutOptionsClient({
         category="BANK"
         options={banks}
         onCreated={(option) => setBanks((prev) => [...prev, option])}
+        onDeleted={(id) => setBanks((prev) => prev.filter((o) => o.id !== id))}
       />
 
       <OptionSection
@@ -195,6 +217,7 @@ export function PayoutOptionsClient({
         category="WALLET"
         options={wallets}
         onCreated={(option) => setWallets((prev) => [...prev, option])}
+        onDeleted={(id) => setWallets((prev) => prev.filter((o) => o.id !== id))}
       />
     </div>
   );

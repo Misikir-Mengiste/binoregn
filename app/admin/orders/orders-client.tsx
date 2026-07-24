@@ -3,12 +3,12 @@
 import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { TableToolbar } from "@/components/table-toolbar";
 import { Pagination } from "@/components/pagination";
 import { InitialsAvatar } from "@/components/initials-avatar";
+import { DeleteButton } from "@/components/delete-button";
 import { cn } from "@/lib/utils";
 
 type OrderRow = {
@@ -18,6 +18,8 @@ type OrderRow = {
   buyerAddress: string;
   buyerCity: string | null;
   buyerNotes: string | null;
+  color: string | null;
+  size: string | null;
   deliveryStatus: string;
   fulfillmentStatus: string;
   cashReconciledAt: Date | null;
@@ -58,6 +60,17 @@ export function OrdersClient({ orders: allOrders }: { orders: OrderRow[] }) {
 
   const pageCount = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
   const pageItems = orders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  async function deleteOrder(id: string) {
+    const response = await fetch(`/api/admin/orders/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.error?.message ?? "Could not delete the order");
+    }
+    router.refresh();
+  }
 
   async function markCashReconciled(id: string) {
     setPendingId(id);
@@ -164,6 +177,11 @@ export function OrdersClient({ orders: allOrders }: { orders: OrderRow[] }) {
                     <p className="text-sm text-ink-600">
                       {order.product.priceBirr.toLocaleString()} ETB
                     </p>
+                    {(order.color || order.size) && (
+                      <p className="mt-1 text-xs text-ink-600">
+                        {[order.color, order.size].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
                     <p className="mt-2 text-xs text-ink-400">
                       Affiliate product
                     </p>
@@ -249,13 +267,10 @@ export function OrdersClient({ orders: allOrders }: { orders: OrderRow[] }) {
                   >
                     {open ? "Hide" : "Edit steps"}
                   </Button>
-                  <button
-                    type="button"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-border bg-card text-ink-400"
-                    onClick={() => setExpandedId(open ? null : order.id)}
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
+                  <DeleteButton
+                    label="Delete order"
+                    onDelete={() => deleteOrder(order.id)}
+                  />
                 </div>
               </div>
 

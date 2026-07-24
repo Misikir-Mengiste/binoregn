@@ -6,6 +6,7 @@ import { KpiStrip } from "@/components/kpi-strip";
 import { StatusBadge } from "@/components/status-badge";
 import { InitialsAvatar } from "@/components/initials-avatar";
 import { CreatorApproveButton } from "./creator-approve-button";
+import { CreatorDeactivateButton } from "./creator-deactivate-button";
 
 const PAYOUT_METHOD_LABELS: Record<string, string> = {
   BANK_TRANSFER: "Bank transfer",
@@ -73,6 +74,7 @@ export default async function AdminCreatorDetailPage({
       payoutAccountName: true,
       payoutAccountNumber: true,
       payoutBankName: true,
+      isActive: true,
     },
   });
 
@@ -203,7 +205,11 @@ export default async function AdminCreatorDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {creator.creatorProfileStatus ? (
+          {!creator.isActive ? (
+            <span className="rounded-pill bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
+              Deactivated
+            </span>
+          ) : creator.creatorProfileStatus ? (
             <StatusBadge status={creator.creatorProfileStatus} />
           ) : (
             <span className="text-xs text-ink-400">Onboarding incomplete</span>
@@ -211,6 +217,10 @@ export default async function AdminCreatorDetailPage({
           {!isApproved && creator.creatorOnboardingCompletedAt ? (
             <CreatorApproveButton creatorId={creator.id} />
           ) : null}
+          <CreatorDeactivateButton
+            creatorId={creator.id}
+            isActive={creator.isActive}
+          />
         </div>
       </div>
 

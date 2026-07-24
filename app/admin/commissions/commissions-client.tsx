@@ -2,12 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { TableToolbar } from "@/components/table-toolbar";
 import { Pagination } from "@/components/pagination";
 import { InitialsAvatar } from "@/components/initials-avatar";
+import { DeleteButton } from "@/components/delete-button";
 
 type CommissionRow = {
   id: string;
@@ -103,6 +103,17 @@ export function CommissionsClient({
     }
   }
 
+  async function deleteCommission(id: string) {
+    const response = await fetch(`/api/admin/commissions/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.error?.message ?? "Could not delete the commission");
+    }
+    router.refresh();
+  }
+
   return (
     <div className="overflow-hidden rounded-[10px] border border-border bg-card shadow-card">
       <TableToolbar
@@ -180,8 +191,8 @@ export function CommissionsClient({
                   <StatusBadge status={commission.status} />
                 </td>
                 <td className="px-5 py-3.5">
-                  {commission.status === "PENDING" ? (
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    {commission.status === "PENDING" ? (
                       <Button
                         size="sm"
                         className="h-8 rounded-[8px]"
@@ -190,20 +201,18 @@ export function CommissionsClient({
                       >
                         Mark paid
                       </Button>
-                      <button
-                        type="button"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-border bg-card text-ink-400"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      {commission.paidAt
-                        ? new Date(commission.paidAt).toLocaleDateString()
-                        : "Paid"}
-                    </span>
-                  )}
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {commission.paidAt
+                          ? new Date(commission.paidAt).toLocaleDateString()
+                          : "Paid"}
+                      </span>
+                    )}
+                    <DeleteButton
+                      label="Delete commission"
+                      onDelete={() => deleteCommission(commission.id)}
+                    />
+                  </div>
                 </td>
               </tr>
             ))}

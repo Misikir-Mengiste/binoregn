@@ -6,9 +6,12 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireAdmin } from "@/lib/auth-helpers";
 
 // Local image upload — no third-party service. The admin posts the image
-// bytes here; we write them under public/uploads/ (served statically by
-// Next.js at /uploads/<name>) and store that path in the product's
-// imageUrls. Runs on Node (not edge) so the filesystem is available.
+// bytes here; we write them under public/uploads/ and store that path in
+// the product's imageUrls. Served back through /api/uploads/<name> (see
+// that route) rather than Next's static /public handler, which caches
+// the directory listing at server startup and won't see files written
+// after boot until the process restarts. Runs on Node (not edge) so the
+// filesystem is available.
 export const runtime = "nodejs";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB
@@ -43,5 +46,5 @@ export async function POST(request: NextRequest) {
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, filename), bytes);
 
-  return apiSuccess({ url: `/uploads/${filename}` });
+  return apiSuccess({ url: `/api/uploads/${filename}` });
 }

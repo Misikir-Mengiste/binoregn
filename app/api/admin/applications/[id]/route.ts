@@ -63,3 +63,26 @@ export async function PATCH(
 
   return apiSuccess({ ...updated, affiliateLinkSlug: affiliateLink.slug });
 }
+
+// Soft delete — see lib/prisma.ts. Application isn't independently
+// referenced by Order/Commission (those go through AffiliateLink), so
+// this is safe regardless of status; the row and its approval history
+// stay in the database.
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const authed = await requireAdmin();
+  if (authed instanceof NextResponse) return authed;
+
+  const { id } = await params;
+
+  const existing = await prisma.application.findUnique({ where: { id } });
+  if (!existing) {
+    return apiError("Application not found", 404);
+  }
+
+  await prisma.application.delete({ where: { id } });
+
+  return apiSuccess({ id });
+}

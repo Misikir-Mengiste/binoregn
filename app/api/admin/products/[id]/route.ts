@@ -4,10 +4,6 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { updateProductSchema } from "@/lib/validations/product";
 
-// No delete endpoint — a product with existing orders/commissions
-// can't be removed without breaking historical records, and
-// deletion isn't in project-overview.md's scope
-// (doc/backend-api-plan.md Open Question 4).
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -40,4 +36,40 @@ export async function PATCH(
   });
 
   return apiSuccess(product);
+}
+
+// A hard delete — Product isn't a financial/audit record, but it can
+// have real activity (applications, affiliate links, orders) that
+// would be orphaned by removing it, so deletion is blocked whenever
+// any exists rather than silently cascading.
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const authed = await requireAdmin();
+  if (authed instanceof NextResponse) return authed;
+
+  const { id } = await params;
+
+  const existing = await prisma.product.findUnique({ where: { id } });
+  if (!existing) {
+    return apiError("Product not found", 404);
+  }
+
+  const [applicationCount, orderCount, affiliateLinkCount] = await Promise.all([
+    prisma.application.count({ where: { productId: id } }),
+    prisma.order.count({ where: { productId: id } }),
+    prisma.affiliateLink.count({ where: { productId: id } }),
+  ]);
+
+  if (applicationCount > 0 || orderCount > 0 || affiliateLinkCount > 0) {
+    return apiError(
+      `Can't delete — this product has ${applicationCount} application(s), ${affiliateLinkCount} affiliate link(s), and ${orderCount} order(s) tied to it.`,
+      409,
+    );
+  }
+
+  await prisma.product.delete({ where: { id } });
+
+  return apiSuccess({ id });
 }

@@ -24,6 +24,8 @@ export default async function AdminOrderInvoicePage({
       buyerCity: true,
       buyerEmail: true,
       quantity: true,
+      color: true,
+      size: true,
       createdAt: true,
       deliveryStatus: true,
       fulfillmentStatus: true,
@@ -124,6 +126,18 @@ export default async function AdminOrderInvoicePage({
                 <span className="font-semibold text-foreground">Quantity</span>{" "}
                 {order.quantity}
               </p>
+              {order.color ? (
+                <p>
+                  <span className="font-semibold text-foreground">Color</span>{" "}
+                  {order.color}
+                </p>
+              ) : null}
+              {order.size ? (
+                <p>
+                  <span className="font-semibold text-foreground">Size</span>{" "}
+                  {order.size}
+                </p>
+              ) : null}
               <p>
                 <span className="font-semibold text-foreground">Unit price</span>{" "}
                 {order.product.priceBirr.toLocaleString()} ETB
@@ -167,7 +181,11 @@ export default async function AdminOrderInvoicePage({
                         <p className="text-sm font-semibold text-foreground">
                           {order.product.name}
                         </p>
-                        <p className="text-xs text-ink-400">Affiliate order</p>
+                        <p className="text-xs text-ink-400">
+                          {[order.color, order.size]
+                            .filter(Boolean)
+                            .join(" · ") || "Affiliate order"}
+                        </p>
                       </div>
                     </div>
                   </td>

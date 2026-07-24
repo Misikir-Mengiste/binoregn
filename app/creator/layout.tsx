@@ -29,9 +29,19 @@ export default async function CreatorLayout({
 
   const creator = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { creatorOnboardingCompletedAt: true, creatorProfileStatus: true },
+    select: {
+      creatorOnboardingCompletedAt: true,
+      creatorProfileStatus: true,
+      isActive: true,
+    },
   });
-  if (!creator?.creatorOnboardingCompletedAt) {
+  // Deactivation (admin "delete") takes effect immediately, even for an
+  // already-logged-in session — the JWT itself isn't rechecked per
+  // request, so this layout-level DB read is what actually enforces it.
+  if (!creator?.isActive) {
+    redirect("/sign-in");
+  }
+  if (!creator.creatorOnboardingCompletedAt) {
     redirect("/onboarding");
   }
   if (creator.creatorProfileStatus !== "APPROVED") {

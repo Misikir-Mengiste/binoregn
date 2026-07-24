@@ -32,6 +32,8 @@ export function CheckoutForm({
     return Math.min(99, Math.max(1, parsed));
   }, [searchParams]);
   const [quantity, setQuantity] = useState(initialQuantity);
+  const color = searchParams.get("color") || undefined;
+  const size = searchParams.get("size") || undefined;
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +59,8 @@ export function CheckoutForm({
           buyerEmail: buyerEmail.trim() || undefined,
           buyerNotes: buyerNotes.trim() || undefined,
           quantity,
+          color,
+          size,
         }),
       });
       if (!response.ok) {
@@ -133,6 +137,11 @@ export function CheckoutForm({
               <div>
                 <p className="text-sm font-medium text-foreground">{productName}</p>
                 <p className="text-xs text-ink-600">{priceBirr} ETB</p>
+                {(color || size) && (
+                  <p className="mt-0.5 text-xs text-ink-400">
+                    {[color, size].filter(Boolean).join(" · ")}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2 rounded-[8px] border border-border px-2 py-1">
                 <button
