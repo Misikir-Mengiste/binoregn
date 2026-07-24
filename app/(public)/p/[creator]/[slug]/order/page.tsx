@@ -47,7 +47,7 @@ export default async function OrderCheckoutPage({
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">{product.name}</p>
-            <p className="text-sm text-ink-600">{product.priceBirr} Birr</p>
+            <p className="text-sm text-ink-600">{product.priceBirr} ETB</p>
           </div>
         </div>
 

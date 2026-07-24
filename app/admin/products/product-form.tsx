@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent, type SubmitEvent } from "react";
+import { useState, type ChangeEvent, type SubmitEvent } from "react";
 import { ImagePlus, Plus, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import type { Product } from "@/generated/prisma/client";
 
 type ProductWithExtras = Product & {
@@ -145,7 +146,6 @@ export function ProductForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [imageUrlInput, setImageUrlInput] = useState("");
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   // Alternative to uploading a file: add a product image by pasting a URL.
   function addImageUrl() {
@@ -157,43 +157,6 @@ export function ProductForm({
         : { ...v, imageUrls: [...v.imageUrls, url] },
     );
     setImageUrlInput("");
-  }
-
-  // Wrap the current textarea selection with markdown markers (or insert a
-  // placeholder if nothing is selected), then restore focus/selection.
-  function wrapSelection(before: string, after: string, placeholder: string) {
-    const el = descriptionRef.current;
-    if (!el) return;
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const text = values.description;
-    const selected = text.slice(start, end) || placeholder;
-    const next =
-      text.slice(0, start) + before + selected + after + text.slice(end);
-    setValues((v) => ({ ...v, description: next }));
-    requestAnimationFrame(() => {
-      el.focus();
-      const cursor = start + before.length;
-      el.setSelectionRange(cursor, cursor + selected.length);
-    });
-  }
-
-  // Prefix every line touched by the selection with "- " for bullet lists.
-  function prefixSelectedLines(prefix: string) {
-    const el = descriptionRef.current;
-    if (!el) return;
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const text = values.description;
-    const lineStart = text.lastIndexOf("\n", start - 1) + 1;
-    const block = text.slice(lineStart, end);
-    const prefixed = block
-      .split("\n")
-      .map((line) => prefix + line)
-      .join("\n");
-    const next = text.slice(0, lineStart) + prefixed + text.slice(end);
-    setValues((v) => ({ ...v, description: next }));
-    requestAnimationFrame(() => el.focus());
   }
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -309,59 +272,13 @@ export function ProductForm({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="description" className="text-ink-600">
-              Product Description
-            </Label>
-            <textarea
-              id="description"
-              ref={descriptionRef}
-              rows={8}
-              className="w-full rounded-[8px] border border-input bg-transparent px-3 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            <Label className="text-ink-600">Product Description</Label>
+            <RichTextEditor
               value={values.description}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, description: e.target.value }))
+              onChange={(html) =>
+                setValues((v) => ({ ...v, description: html }))
               }
             />
-            <div className="flex flex-wrap items-center gap-2 rounded-[8px] border border-border bg-surface-100 px-2.5 py-1 text-[11px] text-ink-400">
-              <button
-                type="button"
-                onClick={() => wrapSelection("**", "**", "bold text")}
-                className="rounded-[6px] border border-border bg-card px-1.5 py-0.5 font-semibold text-ink-600 transition-colors hover:bg-surface-100"
-              >
-                B
-              </button>
-              <button
-                type="button"
-                onClick={() => wrapSelection("*", "*", "italic text")}
-                className="rounded-[6px] border border-border bg-card px-1.5 py-0.5 font-medium text-ink-600 italic transition-colors hover:bg-surface-100"
-              >
-                I
-              </button>
-              <button
-                type="button"
-                onClick={() => wrapSelection("__", "__", "underlined text")}
-                className="rounded-[6px] border border-border bg-card px-1.5 py-0.5 font-medium text-ink-600 underline transition-colors hover:bg-surface-100"
-              >
-                U
-              </button>
-              <button
-                type="button"
-                onClick={() => wrapSelection("[", "](https://)", "link text")}
-                className="rounded-[6px] border border-border bg-card px-2 py-0.5 text-ink-600 transition-colors hover:bg-surface-100"
-              >
-                Link
-              </button>
-              <button
-                type="button"
-                onClick={() => prefixSelectedLines("- ")}
-                className="rounded-[6px] border border-border bg-card px-2 py-0.5 text-ink-600 transition-colors hover:bg-surface-100"
-              >
-                List
-              </button>
-              <span className="ml-auto text-ink-400">
-                Bold, italic, underline, links &amp; lists
-              </span>
-            </div>
           </div>
         </FormCard>
 
@@ -421,7 +338,7 @@ export function ProductForm({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="priceBirr" className="text-ink-600">
-                  Price (Birr)
+                  Price (ETB)
                 </Label>
                 <Input
                   id="priceBirr"
@@ -437,7 +354,7 @@ export function ProductForm({
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="compareAtBirr" className="text-ink-600">
-                  Compare at (Birr)
+                  Compare at (ETB)
                 </Label>
                 <Input
                   id="compareAtBirr"
@@ -453,7 +370,7 @@ export function ProductForm({
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="commissionBirr" className="text-ink-600">
-                  Commission (Birr)
+                  Commission (ETB)
                 </Label>
                 <Input
                   id="commissionBirr"

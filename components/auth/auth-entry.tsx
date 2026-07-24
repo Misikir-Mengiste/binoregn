@@ -172,7 +172,7 @@ export function AuthEntry({ variant }: { variant: Variant }) {
               </p>
             </div>
             <form onSubmit={handleVerifyCode} className="flex flex-col gap-5">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 {codeSlots.map((slot, index) => (
                   <input
                     key={index}
@@ -185,7 +185,7 @@ export function AuthEntry({ variant }: { variant: Variant }) {
                     onChange={(event) => updateCode(index, event.target.value)}
                     onKeyDown={(event) => handleCodeKeyDown(index, event)}
                     onPaste={(event) => handleCodePaste(index, event)}
-                    className="h-12 w-12 rounded-[12px] border border-border text-center text-base font-semibold text-foreground outline-none focus:border-teal-600"
+                    className="h-12 w-full min-w-0 flex-1 rounded-[12px] border border-border text-center text-base font-semibold text-foreground outline-none focus:border-teal-600"
                     aria-label={`Digit ${index + 1}`}
                   />
                 ))}

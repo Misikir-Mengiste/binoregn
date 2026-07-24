@@ -83,7 +83,7 @@ export async function getCreatorNotifications(
       events.push({
         id: `commission-paid-${commission.id}`,
         type: "COMMISSION",
-        title: `${commission.amountBirr.toLocaleString()} Birr paid`,
+        title: `${commission.amountBirr.toLocaleString()} ETB paid`,
         detail: commission.order.product.name,
         at: commission.paidAt,
         positive: true,
@@ -92,7 +92,7 @@ export async function getCreatorNotifications(
       events.push({
         id: `commission-pending-${commission.id}`,
         type: "COMMISSION",
-        title: `${commission.amountBirr.toLocaleString()} Birr commission earned`,
+        title: `${commission.amountBirr.toLocaleString()} ETB commission earned`,
         detail: `${commission.order.product.name} · pending payout`,
         at: commission.createdAt,
         positive: true,
@@ -106,7 +106,7 @@ export async function getCreatorNotifications(
       id: `withdrawal-${withdrawal.id}`,
       type: "WITHDRAWAL",
       title: approved ? "Withdrawal approved" : "Withdrawal rejected",
-      detail: `${withdrawal.amountBirr.toLocaleString()} Birr`,
+      detail: `${withdrawal.amountBirr.toLocaleString()} ETB`,
       at: withdrawal.decidedAt!,
       positive: approved,
     });

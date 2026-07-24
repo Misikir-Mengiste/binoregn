@@ -119,7 +119,7 @@ export function EarningsHistory({ items }: { items: HistoryItem[] }) {
                   >
                     {item.direction === "in" && "+"}
                     {item.direction === "out" && "−"}
-                    {item.amountBirr.toLocaleString()} Birr
+                    {item.amountBirr.toLocaleString()} ETB
                   </span>
                 </div>
               </div>

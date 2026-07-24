@@ -59,7 +59,7 @@ export default async function AdminCommissionsPage() {
         items={[
           {
             label: "Pending total",
-            value: `${pendingAgg._sum.amountBirr ?? 0} Birr`,
+            value: `${pendingAgg._sum.amountBirr ?? 0} ETB`,
             accent: "orange",
           },
           {
@@ -69,12 +69,12 @@ export default async function AdminCommissionsPage() {
           },
           {
             label: "Paid total",
-            value: `${paidAgg._sum.amountBirr ?? 0} Birr`,
+            value: `${paidAgg._sum.amountBirr ?? 0} ETB`,
             accent: "mint",
           },
           {
             label: "Paid this month",
-            value: `${paidThisMonthAgg._sum.amountBirr ?? 0} Birr`,
+            value: `${paidThisMonthAgg._sum.amountBirr ?? 0} ETB`,
             accent: "coral",
           },
         ]}

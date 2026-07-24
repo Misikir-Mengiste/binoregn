@@ -11,7 +11,7 @@ type Method = "BANK_TRANSFER" | "TELEBIRR" | "CBE_BIRR";
 const METHOD_OPTIONS: { value: Method; label: string }[] = [
   { value: "BANK_TRANSFER", label: "Bank transfer" },
   { value: "TELEBIRR", label: "Telebirr" },
-  { value: "CBE_BIRR", label: "CBE Birr" },
+  { value: "CBE_BIRR", label: "CBE ETB" },
 ];
 
 export function PayoutMethodForm({

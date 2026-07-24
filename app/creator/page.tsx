@@ -27,7 +27,7 @@ const DONUT_PALETTE = [
 const DONUT_OTHER = "#9a97ac"; // ink-400
 
 function birr(amount: number) {
-  return `${amount.toLocaleString()} Birr`;
+  return `${amount.toLocaleString()} ETB`;
 }
 
 // Kept out of the component body so the render stays pure (no Date.now()).
@@ -124,7 +124,7 @@ function DonutChart({
         <span className="text-xl font-bold text-foreground">
           {total.toLocaleString()}
         </span>
-        <span className="text-[11px] text-ink-400">Birr</span>
+        <span className="text-[11px] text-ink-400">ETB</span>
       </div>
     </div>
   );
@@ -286,7 +286,7 @@ export default async function CreatorOverviewPage() {
               <p className="text-[30px] leading-tight font-bold tracking-tight text-foreground">
                 {availableBalance.toLocaleString()}
                 <span className="ml-1 text-base font-semibold text-ink-400">
-                  Birr
+                  ETB
                 </span>
               </p>
               <p className="text-xs text-ink-400">
@@ -402,7 +402,7 @@ export default async function CreatorOverviewPage() {
                       }`}
                     >
                       {item.amount >= 0 ? "+" : "−"}
-                      {Math.abs(item.amount).toLocaleString()} Birr
+                      {Math.abs(item.amount).toLocaleString()} ETB
                     </span>
                   </div>
                 </div>

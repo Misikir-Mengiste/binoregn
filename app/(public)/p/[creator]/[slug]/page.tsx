@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Percent, RotateCcw, Truck, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { Markdown } from "@/components/markdown";
+import { RichText } from "@/components/rich-text";
 import { ProductPurchasePanel } from "./product-purchase-panel";
 import { ProductGallery } from "./product-gallery";
 import { CollapsibleCard } from "./collapsible-card";
@@ -139,12 +139,12 @@ export default async function StorefrontPage({
               </h1>
               <div className="flex flex-wrap items-center gap-3">
                 <p className="text-[22px] font-bold text-foreground">
-                  {product.priceBirr.toLocaleString()} Birr
+                  {product.priceBirr.toLocaleString()} ETB
                 </p>
                 {product.compareAtBirr &&
                 product.compareAtBirr > product.priceBirr ? (
                   <p className="text-sm text-ink-400 line-through">
-                    {product.compareAtBirr.toLocaleString()} Birr
+                    {product.compareAtBirr.toLocaleString()} ETB
                   </p>
                 ) : null}
               </div>
@@ -152,10 +152,7 @@ export default async function StorefrontPage({
 
             {product.description ? (
               <CollapsibleCard title="Description">
-                <Markdown
-                  text={product.description}
-                  className="space-y-2 text-sm leading-relaxed text-ink-600"
-                />
+                <RichText html={product.description} />
               </CollapsibleCard>
             ) : null}
 
@@ -233,12 +230,12 @@ export default async function StorefrontPage({
                     </p>
                     <div className="flex flex-wrap items-center gap-2 text-sm">
                       <span className="font-semibold text-foreground">
-                        {link.product.priceBirr.toLocaleString()} Birr
+                        {link.product.priceBirr.toLocaleString()} ETB
                       </span>
                       {link.product.compareAtBirr &&
                       link.product.compareAtBirr > link.product.priceBirr ? (
                         <span className="text-xs text-ink-400 line-through">
-                          {link.product.compareAtBirr.toLocaleString()} Birr
+                          {link.product.compareAtBirr.toLocaleString()} ETB
                         </span>
                       ) : null}
                     </div>

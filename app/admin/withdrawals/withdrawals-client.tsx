@@ -22,7 +22,7 @@ type WithdrawalRow = {
 const PAYOUT_METHOD_LABEL: Record<string, string> = {
   BANK_TRANSFER: "Bank transfer",
   TELEBIRR: "Telebirr",
-  CBE_BIRR: "CBE Birr",
+  CBE_BIRR: "CBE ETB",
 };
 
 // Admin needs the actual destination to send the manual payout to —
@@ -110,7 +110,7 @@ export function WithdrawalsClient({ withdrawals }: { withdrawals: WithdrawalRow[
                     <p className="text-xs text-ink-400">{withdrawal.creator.email}</p>
                   </td>
                   <td className="px-5 py-3.5 text-sm text-ink-600">
-                    {withdrawal.amountBirr} Birr
+                    {withdrawal.amountBirr} ETB
                   </td>
                   <td className="px-5 py-3.5 text-sm">
                     <PayoutDetails withdrawal={withdrawal} />

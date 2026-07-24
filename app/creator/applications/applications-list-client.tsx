@@ -131,13 +131,13 @@ export function ApplicationsListClient({
                             {application.product.name}
                           </p>
                           <p className="text-xs text-ink-400">
-                            {application.product.priceBirr.toLocaleString()} Birr
+                            {application.product.priceBirr.toLocaleString()} ETB
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-5 py-3 text-ink-600">
-                      {application.product.commissionBirr.toLocaleString()} Birr
+                      {application.product.commissionBirr.toLocaleString()} ETB
                     </td>
                     <td className="px-5 py-3 text-ink-600">
                       {new Date(application.createdAt).toLocaleDateString()}

@@ -112,7 +112,7 @@ export function LinksListClient({
                           </p>
                           <p className="text-xs text-ink-400">
                             Earn {link.product.commissionBirr.toLocaleString()}{" "}
-                            Birr per completed order
+                            ETB per completed order
                           </p>
                         </div>
                       </div>

@@ -143,7 +143,7 @@ export function ProductsClient({
           },
           {
             label: "Avg. Commission",
-            value: `${kpis.avgCommissionBirr.toLocaleString()} Birr`,
+            value: `${kpis.avgCommissionBirr.toLocaleString()} ETB`,
             caption: "Average commission per product",
             accent: "orange",
           },
@@ -207,10 +207,10 @@ export function ProductsClient({
                       <p className="text-xs text-ink-400">{product.category}</p>
                     )}
                     <p className="mt-1 text-lg font-semibold text-foreground">
-                      {product.priceBirr.toLocaleString()} Birr
+                      {product.priceBirr.toLocaleString()} ETB
                     </p>
                     <p className="text-xs text-ink-400">
-                      Commission {product.commissionBirr.toLocaleString()} Birr
+                      Commission {product.commissionBirr.toLocaleString()} ETB
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 text-xs text-ink-400">
@@ -312,7 +312,7 @@ export function ProductsClient({
                     {previewProduct.name}
                   </p>
                   <p className="text-lg font-bold text-foreground">
-                    {previewProduct.priceBirr} Birr
+                    {previewProduct.priceBirr} ETB
                   </p>
                   {previewProduct.description && (
                     <p className="text-sm text-ink-600">

@@ -117,7 +117,7 @@ export function OverviewOrders({ orders }: { orders: OrderRow[] }) {
                 </td>
                 <td className="px-5 py-3.5">
                   <p className="font-semibold text-foreground">
-                    {order.product.priceBirr.toLocaleString()} Birr
+                    {order.product.priceBirr.toLocaleString()} ETB
                   </p>
                   <p className="text-xs text-ink-400">Cash on Delivery</p>
                 </td>

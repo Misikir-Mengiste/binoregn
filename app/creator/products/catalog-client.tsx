@@ -28,7 +28,7 @@ type CatalogProduct = {
   affiliateLinkSlug: string | null;
 };
 
-// Fixed Birr price buckets — only those with matching products are shown,
+// Fixed ETB price buckets — only those with matching products are shown,
 // each with a real live count.
 const PRICE_BUCKETS = [
   { key: "u500", label: "Below 500 ETB", min: 0, max: 499 },
@@ -496,25 +496,29 @@ export function CatalogClient({
                       {product.description}
                     </p>
                   )}
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <div>
+                  <div className="mt-3 flex flex-col gap-3">
+                    <div className="min-w-0">
                       <p className="text-[15px] font-bold text-foreground">
                         {product.commissionBirr.toLocaleString()} ETB
                       </p>
                       <p className="text-[11px] text-ink-400">Your commission</p>
                     </div>
-                    <div onClick={(event) => event.stopPropagation()}>
+                    <div
+                      className="w-full"
+                      onClick={(event) => event.stopPropagation()}
+                    >
                       {product.applicationStatus === "APPROVED" &&
                       product.affiliateLinkSlug ? (
                         <CopyButton
                           path={`/p/${creatorSlug}/${product.affiliateLinkSlug}`}
+                          className="w-full"
                         />
                       ) : product.applicationStatus ? (
                         <StatusBadge status={product.applicationStatus} />
                       ) : (
                         <Button
                           size="sm"
-                          className="h-8 rounded-[8px]"
+                          className="h-8 w-full rounded-[8px]"
                           disabled={applyingId === product.id}
                           onClick={() => apply(product.id)}
                         >

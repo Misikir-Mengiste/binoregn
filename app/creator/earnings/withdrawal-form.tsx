@@ -62,7 +62,7 @@ export function WithdrawalForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-[1fr_180px]">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="withdrawAmount">Withdrawal amount (Birr)</Label>
+          <Label htmlFor="withdrawAmount">Withdrawal amount (ETB)</Label>
           <Input
             id="withdrawAmount"
             type="number"
@@ -72,7 +72,7 @@ export function WithdrawalForm({
             className="rounded-[8px]"
           />
           <p className="text-xs text-ink-400">
-            Available balance: {availableBirr} Birr
+            Available balance: {availableBirr} ETB
           </p>
         </div>
         <div className="flex flex-col gap-1.5">

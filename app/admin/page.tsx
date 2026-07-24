@@ -70,13 +70,13 @@ export default async function AdminOverviewPage() {
         items={[
           {
             label: "Pending commissions",
-            value: `${summary.pendingCommissionBirr} Birr`,
+            value: `${summary.pendingCommissionBirr} ETB`,
             caption: "Pending commissions last 365 days",
             accent: "teal",
           },
           {
             label: "Paid this month",
-            value: `${summary.paidThisMonthBirr} Birr`,
+            value: `${summary.paidThisMonthBirr} ETB`,
             caption: "Paid commissions this month",
             accent: "orange",
           },

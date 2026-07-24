@@ -60,7 +60,7 @@ export default async function OrderTrackingPage({
                   {order.product.name}
                 </p>
                 <p className="text-sm text-ink-600">
-                  {order.product.priceBirr} Birr · Qty {order.quantity}
+                  {order.product.priceBirr} ETB · Qty {order.quantity}
                 </p>
               </div>
             </div>

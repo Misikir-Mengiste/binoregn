@@ -5,6 +5,15 @@ change.
 
 ## Current Phase
 
+- **2026-07-23 — Currency label switched from "Birr" to "ETB" project-wide
+  (display only).** Replaced every user-facing `Birr` string with `ETB`
+  across app/components/lib (` Birr` → ` ETB`, `(Birr)` → `(ETB)`, plus the
+  two edge cases `"Birr…` and `>Birr<`). Deliberately kept the DB/code
+  identifiers unchanged (`priceBirr`, `commissionBirr`, `amountBirr`,
+  `compareAtBirr`, the `birr()` formatter name, Prisma columns) — those are
+  code, not display, and renaming columns would be a large breaking
+  migration. `tsc` clean; only pre-existing unused-import warnings remain.
+
 - **2026-07-23 — Rebranded to Binoregn (logo, favicon, footer).** New
   `components/logo.tsx` (`BrandMark` = teal rounded "B" square recreating
   the app icon; `Wordmark`). Swapped the old "A"/ShoppingBag marks +

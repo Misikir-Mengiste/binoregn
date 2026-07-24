@@ -126,7 +126,7 @@ export default async function CreatorOrderInvoicePage({
               </p>
               <p>
                 <span className="font-semibold text-foreground">Unit price</span>{" "}
-                {order.product.priceBirr.toLocaleString()} Birr
+                {order.product.priceBirr.toLocaleString()} ETB
               </p>
               <p>
                 <span className="font-semibold text-foreground">Payment</span>{" "}
@@ -173,10 +173,10 @@ export default async function CreatorOrderInvoicePage({
                   </td>
                   <td className="px-4 py-4 text-ink-600">{order.quantity}</td>
                   <td className="px-4 py-4 text-right text-ink-600">
-                    {order.product.priceBirr.toLocaleString()} Birr
+                    {order.product.priceBirr.toLocaleString()} ETB
                   </td>
                   <td className="px-4 py-4 text-right font-semibold text-foreground">
-                    {subtotal.toLocaleString()} Birr
+                    {subtotal.toLocaleString()} ETB
                   </td>
                 </tr>
               </tbody>
@@ -187,15 +187,15 @@ export default async function CreatorOrderInvoicePage({
             <div className="w-full max-w-xs space-y-3 rounded-[12px] border border-border bg-surface-100 p-4 text-sm">
               <div className="flex items-center justify-between text-ink-600">
                 <span>Subtotal</span>
-                <span>{subtotal.toLocaleString()} Birr</span>
+                <span>{subtotal.toLocaleString()} ETB</span>
               </div>
               <div className="flex items-center justify-between text-ink-600">
                 <span>Delivery</span>
-                <span>0 Birr</span>
+                <span>0 ETB</span>
               </div>
               <div className="flex items-center justify-between border-t border-border pt-3 font-semibold text-foreground">
                 <span>Total</span>
-                <span>{subtotal.toLocaleString()} Birr</span>
+                <span>{subtotal.toLocaleString()} ETB</span>
               </div>
             </div>
           </div>

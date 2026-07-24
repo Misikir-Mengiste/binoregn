@@ -9,7 +9,7 @@ import { EarningsHistory, type HistoryItem } from "./earnings-history";
 const PAYOUT_METHOD_LABELS: Record<string, string> = {
   BANK_TRANSFER: "Bank transfer",
   TELEBIRR: "Telebirr",
-  CBE_BIRR: "CBE Birr",
+  CBE_BIRR: "CBE ETB",
 };
 
 // Palette for the "Earnings by product" bars.
@@ -22,7 +22,7 @@ const BAR_COLORS = [
 ];
 
 function birr(amount: number) {
-  return `${amount.toLocaleString()} Birr`;
+  return `${amount.toLocaleString()} ETB`;
 }
 
 function SummaryCard({

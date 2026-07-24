@@ -10,11 +10,11 @@ import { CreatorApproveButton } from "./creator-approve-button";
 const PAYOUT_METHOD_LABELS: Record<string, string> = {
   BANK_TRANSFER: "Bank transfer",
   TELEBIRR: "Telebirr",
-  CBE_BIRR: "CBE Birr",
+  CBE_BIRR: "CBE ETB",
 };
 
 function birr(amount: number) {
-  return `${amount.toLocaleString()} Birr`;
+  return `${amount.toLocaleString()} ETB`;
 }
 
 function Section({

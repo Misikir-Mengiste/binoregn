@@ -132,7 +132,7 @@ export function CheckoutForm({
             <div className="mt-3 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-foreground">{productName}</p>
-                <p className="text-xs text-ink-600">{priceBirr} Birr</p>
+                <p className="text-xs text-ink-600">{priceBirr} ETB</p>
               </div>
               <div className="flex items-center gap-2 rounded-[8px] border border-border px-2 py-1">
                 <button
@@ -160,7 +160,7 @@ export function CheckoutForm({
             <h3 className="text-sm font-semibold text-foreground">Order summary</h3>
             <div className="mt-3 flex items-center justify-between text-sm text-ink-600">
               <span>Subtotal</span>
-              <span className="font-semibold text-foreground">{subtotal} Birr</span>
+              <span className="font-semibold text-foreground">{subtotal} ETB</span>
             </div>
             <div className="mt-2 flex items-center justify-between text-sm text-ink-600">
               <span>Shipping</span>
@@ -170,7 +170,7 @@ export function CheckoutForm({
               <div className="flex items-center justify-between">
                 <span>Order total</span>
                 <span className="text-base font-semibold text-foreground">
-                  {subtotal} Birr
+                  {subtotal} ETB
                 </span>
               </div>
             </div>

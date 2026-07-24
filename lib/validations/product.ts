@@ -1,12 +1,23 @@
 import { z } from "zod";
 
-// imageUrls stores plain URL/path strings — either a local
-// `/uploads/...` path written by POST /api/admin/uploads, or an
-// external URL pasted by the admin. The DB only ever stores
-// references, never binaries (architecture.md).
+// imageUrls stores plain URL/path strings — either a local `/uploads/...`
+// path written by POST /api/admin/uploads, or an external http(s) URL
+// pasted by the admin. `z.url()` only accepts absolute URLs and would
+// reject the local upload path, so validate for either shape here. The DB
+// only ever stores references, never binaries (architecture.md).
+const imageRef = z
+  .string()
+  .trim()
+  .min(1)
+  .max(2000)
+  .refine(
+    (value) => /^https?:\/\//i.test(value) || value.startsWith("/"),
+    { message: "Image must be a full URL or an uploaded /uploads path" },
+  );
+
 export const createProductSchema = z.object({
   name: z.string().trim().min(1).max(200),
-  description: z.string().trim().max(5000).optional(),
+  description: z.string().trim().max(50000).optional(),
   category: z.string().trim().min(1).max(120).optional(),
   subCategory: z.string().trim().min(1).max(120).optional(),
   features: z.array(z.string().trim().min(1).max(200)).default([]),
@@ -29,7 +40,7 @@ export const createProductSchema = z.object({
   shippingDeliveryTime: z.string().trim().min(1).max(200).optional(),
   shippingArrives: z.string().trim().min(1).max(200).optional(),
   commissionBirr: z.number().int().positive(),
-  imageUrls: z.array(z.url()).default([]),
+  imageUrls: z.array(imageRef).default([]),
 });
 
 export const updateProductSchema = createProductSchema.partial();

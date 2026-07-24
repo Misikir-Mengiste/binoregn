@@ -162,7 +162,7 @@ export function OrdersClient({ orders: allOrders }: { orders: OrderRow[] }) {
                       {order.product.name}
                     </p>
                     <p className="text-sm text-ink-600">
-                      {order.product.priceBirr.toLocaleString()} Birr
+                      {order.product.priceBirr.toLocaleString()} ETB
                     </p>
                     <p className="mt-2 text-xs text-ink-400">
                       Affiliate product

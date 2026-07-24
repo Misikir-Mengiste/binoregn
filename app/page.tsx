@@ -56,7 +56,7 @@ const STEPS: { icon: LucideIcon; title: string; description: string }[] = [
     icon: Store,
     title: "Browse products",
     description:
-      "See every product available to promote, each with its fixed Birr commission shown upfront.",
+      "See every product available to promote, each with its fixed ETB commission shown upfront.",
   },
   {
     icon: ClipboardCheck,
@@ -82,7 +82,7 @@ const CREATOR_POINTS: { icon: LucideIcon; title: string; description: string }[]
   [
     {
       icon: BadgeDollarSign,
-      title: "Fixed Birr commissions",
+      title: "Fixed ETB commissions",
       description:
         "No confusing percentages. Every product pays a set amount you can see before you apply.",
     },
@@ -106,7 +106,7 @@ const STATS: { value: string; label: string; tone: "light" | "lime" | "dark" }[]
     { value: "12k+", label: "creators earning on the platform", tone: "light" },
     { value: "100%", label: "transparent — see your commission before applying", tone: "lime" },
     { value: "540+", label: "products ready to promote across niches", tone: "dark" },
-    { value: "2.4M+", label: "Birr paid out to creators so far", tone: "light" },
+    { value: "2.4M+", label: "ETB paid out to creators so far", tone: "light" },
   ];
 
 // DEMO DATA — placeholder brand names/logos to replace with real partners.
@@ -119,55 +119,68 @@ const DEMO_BRANDS: { name: string; icon: LucideIcon }[] = [
   { name: "Everly", icon: Store },
 ];
 
+// DEMO DATA — placeholder payout rows for the hero bento card.
+const DEMO_PAYOUTS = [
+  { name: "Leather Crossbody Bag", date: "Paid today", amount: "+180" },
+  { name: "Wireless Earbuds", date: "2 days ago", amount: "+200" },
+  { name: "Power Bank 20000mAh", date: "5 days ago", amount: "+100" },
+];
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* ============ HERO ============ */}
-      <section className="relative overflow-hidden rounded-b-[36px] bg-gradient-to-br from-[#1f5fd0] via-[#4b8fe0] to-[#cfeafa] pb-44 text-white">
+      <section className="relative flex min-h-screen flex-col overflow-hidden rounded-b-3xl bg-gradient-to-br from-teal-700 via-teal-600 to-teal-500 pb-40 text-white">
         <Sparkles className="pointer-events-none absolute -right-10 top-24 h-72 w-72 text-white/10" />
 
-        {/* Nav */}
-        <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/15 text-sm font-bold leading-none text-white backdrop-blur">
-              B
-            </span>
-            <span className="text-[15px] font-bold">
-              Binoregn<span className="text-[#c9f24a]">.</span>
-            </span>
-          </div>
-          <nav className="hidden items-center gap-8 text-sm font-medium text-white/85 md:flex">
-            {NAV_LINKS.map((link) => (
-              <a key={link.href} href={link.href} className="hover:text-white">
-                {link.label}
-              </a>
-            ))}
-          </nav>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/sign-in"
-              className="hidden text-sm font-semibold text-white/90 hover:text-white sm:block"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/sign-up"
-              className="inline-flex items-center rounded-full bg-[#c9f24a] px-4 py-2 text-sm font-semibold text-[#0f1115] transition-transform hover:-translate-y-0.5"
-            >
-              Get started
-            </Link>
+        {/* Floating frosted pill nav */}
+        <header className="relative z-10 mx-auto mt-4 w-full max-w-6xl px-4">
+          <div className="flex items-center justify-between gap-4 rounded-full border border-white/15 bg-black/20 py-2 pl-4 pr-2 shadow-lg shadow-black/10 backdrop-blur-md">
+            <div className="flex items-center gap-2.5 pl-1">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-sm font-bold leading-none text-white">
+                B
+              </span>
+              <span className="text-sm font-bold text-white">
+                Binoregn<span className="text-teal-500">.</span>
+              </span>
+            </div>
+            <nav className="hidden items-center gap-7 text-sm font-medium text-white/80 lg:flex">
+              {NAV_LINKS.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="transition-colors hover:text-white"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+            <div className="flex items-center gap-1.5">
+              <Link
+                href="/sign-in"
+                className="hidden px-3 text-sm font-semibold text-white/85 hover:text-white sm:block"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/sign-up"
+                className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-teal-700 transition-transform hover:-translate-y-0.5"
+              >
+                Get started
+              </Link>
+            </div>
           </div>
         </header>
 
-        {/* Hero content */}
-        <div className="relative z-10 mx-auto mt-6 grid max-w-6xl items-center gap-10 px-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <div>
-            <h1 className="text-[40px] font-bold leading-[1.05] tracking-tight sm:text-[54px]">
+        {/* Hero content — text only; the right side is intentionally open */}
+        <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 items-center px-6 py-12">
+          <div className="max-w-2xl">
+            <h1 className="text-5xl font-bold leading-[1.02] tracking-tight sm:text-6xl">
               Turn your influence
               <br />
               into affiliate income
             </h1>
-            <p className="mt-5 max-w-md text-[15px] leading-relaxed text-white/85">
+            <p className="mt-6 max-w-md text-base leading-relaxed text-white/85">
               Join a creator-first marketplace: apply to promote the products
               you believe in, share your unique link, and earn a fixed
               commission on every delivered order.
@@ -175,17 +188,17 @@ export default function Home() {
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <Link
                 href="/sign-up"
-                className="group inline-flex items-center gap-3 rounded-full bg-[#0f1115] py-2 pl-6 pr-2 text-sm font-semibold text-white"
+                className="group inline-flex items-center gap-3 rounded-full bg-white py-2 pl-6 pr-2 text-sm font-semibold text-teal-700"
               >
                 Get started
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#c9f24a] text-[#0f1115] transition-transform group-hover:rotate-45">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-600 text-white transition-transform group-hover:rotate-45">
                   <ArrowUpRight className="h-4 w-4" />
                 </span>
               </Link>
             </div>
             {/* DEMO rating — replace with real figures later. */}
             <div className="mt-7 flex items-center gap-3">
-              <div className="flex items-center gap-0.5 text-[#c9f24a]">
+              <div className="flex items-center gap-0.5 text-white">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star key={i} className="h-4 w-4 fill-current" />
                 ))}
@@ -195,104 +208,158 @@ export default function Home() {
               </span>
             </div>
           </div>
-
-          {/* Preview panel (no stock photo — a product-earnings mock) */}
-          <div className="relative hidden aspect-[4/3] overflow-hidden rounded-[28px] bg-gradient-to-br from-white/25 to-white/5 p-5 backdrop-blur lg:block">
-            <div className="flex h-full flex-col justify-between rounded-[20px] bg-white/10 p-5">
-              <div className="flex items-center justify-between text-xs text-white/80">
-                <span>Your earnings</span>
-                <span className="rounded-full bg-[#c9f24a] px-2 py-0.5 font-semibold text-[#0f1115]">
-                  Paid
-                </span>
-              </div>
-              <div>
-                <p className="text-sm text-white/75">Commission earned</p>
-                <p className="text-4xl font-bold tracking-tight">+180 Birr</p>
-                <p className="mt-1 text-xs text-white/70">
-                  Leather Crossbody Bag · via your link
-                </p>
-              </div>
-              <div className="flex gap-2">
-                {["Fashion", "Tech", "Beauty"].map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-white/15 px-3 py-1 text-xs text-white"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
       {/* ============ BENTO CARDS (overlapping the hero) ============ */}
       {/* relative+z-20 so these float ABOVE the positioned hero section. */}
       <section className="relative z-20 mx-auto -mt-28 max-w-6xl px-6">
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {/* Peeking widget cards (wide screens only). */}
+        <div className="pointer-events-none absolute -left-6 top-6 hidden w-44 rounded-2xl bg-card p-3 shadow-card xl:block">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-100 text-teal-700">
+              <ClipboardCheck className="h-4 w-4" />
+            </span>
+            <div>
+              <p className="text-xs font-semibold text-foreground">Application</p>
+              <p className="text-xs text-mint-500">Approved</p>
+            </div>
+          </div>
+        </div>
+        <div className="pointer-events-none absolute -right-6 bottom-8 hidden w-44 rounded-2xl bg-card p-3 shadow-card xl:block">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+              <Link2 className="h-4 w-4" />
+            </span>
+            <div>
+              <p className="text-xs font-semibold text-foreground">My links</p>
+              <p className="text-xs text-ink-400">3 active</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 items-start gap-4 lg:grid-cols-12">
           {/* Tags card */}
-          <div className="rounded-[20px] bg-card p-5 shadow-card">
-            <div className="flex flex-wrap gap-1.5">
+          <div className="relative overflow-hidden rounded-3xl bg-card p-5 shadow-card lg:col-span-3">
+            <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-teal-500/20 blur-2xl" />
+            <div className="relative flex flex-wrap gap-1.5">
               {["Fashion", "Tech", "Beauty", "Food", "Lifestyle"].map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-ink-600"
+                  className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-ink-600"
                 >
                   {tag}
                 </span>
               ))}
             </div>
-            <p className="mt-4 text-xs text-ink-400">Products for every niche</p>
-            <p className="text-[26px] font-bold tracking-tight text-foreground">
+            <p className="relative mt-6 text-xs text-ink-400">
+              Products for every niche
+            </p>
+            <p className="relative text-4xl font-bold tracking-tight text-foreground">
               8+
             </p>
           </div>
 
-          {/* Earnings card */}
-          <div className="rounded-[20px] bg-card p-5 shadow-card">
-            <div className="flex items-center justify-between">
-              <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-mint-100 text-mint-500">
-                <TrendingUp className="h-[18px] w-[18px]" />
+          {/* Earnings card (lime accent) */}
+          <div className="relative overflow-hidden rounded-3xl bg-mint-100 p-5 shadow-card lg:col-span-3">
+            <div className="pointer-events-none absolute -bottom-8 -right-8 h-28 w-28 rounded-full bg-white/40 blur-2xl" />
+            <div className="relative flex items-center justify-between">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-mint-500 text-white">
+                <TrendingUp className="h-5 w-5" />
               </span>
-              <span className="text-xs font-semibold text-mint-500">+180</span>
+              <span className="rounded-full bg-mint-500/15 px-2 py-0.5 text-xs font-semibold text-mint-500">
+                +180
+              </span>
             </div>
-            <p className="mt-4 text-xs text-ink-400">Earned this order</p>
-            <p className="text-[26px] font-bold tracking-tight text-foreground">
-              180 Birr
+            <p className="relative mt-6 text-xs font-medium text-ink-600">
+              Earned this order
+            </p>
+            <p className="relative text-4xl font-bold tracking-tight text-foreground">
+              180 ETB
             </p>
           </div>
 
           {/* Dark statement card */}
-          <div className="col-span-2 flex flex-col justify-between rounded-[20px] bg-[#0f1115] p-6 text-white">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#c9f24a] text-[#0f1115]">
-              <BadgeDollarSign className="h-[18px] w-[18px]" />
-            </span>
-            <p className="mt-6 text-[19px] font-semibold leading-snug">
+          <div className="relative col-span-2 flex min-h-[220px] flex-col justify-between overflow-hidden rounded-3xl bg-teal-700 p-6 text-white lg:col-span-3">
+            <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-teal-500/20 blur-3xl" />
+            <div className="relative flex items-start justify-between">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-teal-600">
+                <BadgeDollarSign className="h-5 w-5" />
+              </span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-white">
+                <ArrowUpRight className="h-4 w-4" />
+              </span>
+            </div>
+            <p className="relative mt-6 text-lg font-semibold leading-snug">
               Where creators turn an engaged audience into steady, predictable
               income — one approved link at a time.
             </p>
+          </div>
+
+          {/* Payouts card */}
+          <div className="relative col-span-2 overflow-hidden rounded-3xl bg-card p-5 shadow-card lg:col-span-3">
+            <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-teal-500/15 blur-2xl" />
+            <div className="relative flex items-center justify-between">
+              <p className="text-xs text-ink-400">Paid out</p>
+              <p className="text-sm font-bold text-foreground">
+                680{" "}
+                <span className="font-medium text-ink-400">/ 1,000 ETB</span>
+              </p>
+            </div>
+            <div className="relative mt-3 h-2 w-full overflow-hidden rounded-full bg-surface-100">
+              <div className="h-full w-2/3 rounded-full bg-teal-600" />
+            </div>
+            <ul className="relative mt-4 flex flex-col gap-3">
+              {DEMO_PAYOUTS.map((payout) => (
+                <li
+                  key={payout.name}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="h-6 w-6 shrink-0 rounded-full bg-surface-100" />
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-medium text-foreground">
+                        {payout.name}
+                      </p>
+                      <p className="text-xs text-ink-400">{payout.date}</p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-xs font-semibold text-mint-500">
+                    {payout.amount}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
 
       {/* ============ POSITIONING STATEMENT ============ */}
-      <section id="why-us" className="mx-auto max-w-5xl px-6 py-24 text-center">
-        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ink-400">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#0f1115]" />
-          Why us
-        </p>
-        <h2 className="mx-auto mt-6 max-w-3xl text-[30px] font-bold leading-tight tracking-tight text-foreground sm:text-[40px]">
-          A creator-first affiliate marketplace built to turn your audience{" "}
-          <span className="inline-flex h-8 w-8 translate-y-1 items-center justify-center rounded-full bg-blue-100 text-blue-700">
-            <TrendingUp className="h-4 w-4" />
-          </span>{" "}
-          into income you can{" "}
-          <span className="inline-flex h-8 w-8 translate-y-1 items-center justify-center rounded-full bg-[#c9f24a] text-[#0f1115]">
-            <Lightbulb className="h-4 w-4" />
-          </span>{" "}
-          actually count on.
-        </h2>
+      <section
+        id="why-us"
+        className="relative overflow-hidden py-28 text-center"
+      >
+        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-teal-100 via-surface-100 to-blue-100" />
+        <div className="pointer-events-none absolute -left-24 top-4 -z-10 h-72 w-72 rounded-full bg-teal-400/25 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 bottom-4 -z-10 h-80 w-80 rounded-full bg-blue-400/25 blur-3xl" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-200/30 blur-3xl" />
+        <div className="mx-auto max-w-5xl px-6">
+          <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ink-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-teal-600" />
+            Why us
+          </p>
+          <h2 className="mx-auto mt-6 max-w-3xl text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl">
+            A creator-first affiliate marketplace built to turn your audience{" "}
+            <span className="inline-flex h-8 w-8 translate-y-1 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+              <TrendingUp className="h-4 w-4" />
+            </span>{" "}
+            into income you can{" "}
+            <span className="inline-flex h-8 w-8 translate-y-1 items-center justify-center rounded-full bg-teal-100 text-teal-700">
+              <Lightbulb className="h-4 w-4" />
+            </span>{" "}
+            actually count on.
+          </h2>
+        </div>
       </section>
 
       {/* ============ STAT CARDS ============ */}
@@ -303,17 +370,17 @@ export default function Home() {
               key={stat.value + stat.label}
               className={
                 stat.tone === "lime"
-                  ? "flex flex-col justify-between gap-6 rounded-[20px] bg-[#c9f24a] p-6 text-[#0f1115]"
+                  ? "flex flex-col justify-between gap-6 rounded-2xl bg-mint-100 p-6 text-foreground"
                   : stat.tone === "dark"
-                    ? "flex flex-col justify-between gap-6 rounded-[20px] bg-[#0f1115] p-6 text-white"
-                    : "flex flex-col justify-between gap-6 rounded-[20px] border border-border bg-card p-6"
+                    ? "flex flex-col justify-between gap-6 rounded-2xl bg-teal-700 p-6 text-white"
+                    : "flex flex-col justify-between gap-6 rounded-2xl border border-border bg-card p-6"
               }
             >
               <p
                 className={
                   stat.tone === "light"
-                    ? "text-[34px] font-bold tracking-tight text-foreground"
-                    : "text-[34px] font-bold tracking-tight"
+                    ? "text-4xl font-bold tracking-tight text-foreground"
+                    : "text-4xl font-bold tracking-tight"
                 }
               >
                 {stat.value}
@@ -321,7 +388,7 @@ export default function Home() {
               <p
                 className={
                   stat.tone === "lime"
-                    ? "text-sm font-medium text-[#0f1115]/80"
+                    ? "text-sm font-medium text-ink-600"
                     : stat.tone === "dark"
                       ? "text-sm text-white/75"
                       : "text-sm text-ink-600"
@@ -349,7 +416,7 @@ export default function Home() {
                   className="inline-flex items-center gap-2 text-ink-400"
                 >
                   <Icon className="h-5 w-5" />
-                  <span className="text-[15px] font-semibold">{brand.name}</span>
+                  <span className="text-sm font-semibold">{brand.name}</span>
                 </span>
               );
             })}
@@ -358,12 +425,17 @@ export default function Home() {
       </section>
 
       {/* ============ HOW IT WORKS ============ */}
-      <section id="how-it-works" className="mx-auto max-w-6xl px-6 py-24">
+      <section id="how-it-works" className="relative overflow-hidden py-28">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-teal-100 via-surface-100 to-blue-100" />
+        <div className="pointer-events-none absolute -left-24 top-4 -z-10 h-72 w-72 rounded-full bg-teal-400/25 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 bottom-4 -z-10 h-80 w-80 rounded-full bg-blue-400/25 blur-3xl" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-200/30 blur-3xl" />
+        <div className="relative mx-auto max-w-6xl px-6">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
             How it works
           </p>
-          <h2 className="mt-3 text-[30px] font-bold tracking-tight text-foreground sm:text-[38px]">
+          <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             From your first apply to your first payout.
           </h2>
         </div>
@@ -373,49 +445,58 @@ export default function Home() {
             return (
               <div
                 key={step.title}
-                className="flex flex-col gap-4 rounded-[20px] border border-border bg-card p-6 shadow-card"
+                className="relative flex flex-col gap-4 overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-card transition-transform hover:-translate-y-1"
               >
-                <div className="flex items-center justify-between">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-teal-100 text-teal-700">
+                <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-teal-500/12 blur-2xl" />
+                <div className="relative flex items-center justify-between">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-100 text-teal-700">
                     <Icon className="h-5 w-5" />
                   </span>
-                  <span className="text-sm font-bold text-ink-400">
+                  <span className="text-2xl font-bold text-ink-400/40">
                     0{index + 1}
                   </span>
                 </div>
-                <p className="text-[15px] font-bold text-foreground">
+                <p className="relative text-base font-bold text-foreground">
                   {step.title}
                 </p>
-                <p className="text-sm leading-relaxed text-ink-600">
+                <p className="relative text-sm leading-relaxed text-ink-600">
                   {step.description}
                 </p>
               </div>
             );
           })}
         </div>
+        </div>
       </section>
 
       {/* ============ FOR CREATORS ============ */}
-      <section id="for-creators" className="border-t border-border bg-surface-100">
-        <div className="mx-auto grid max-w-6xl gap-12 px-6 py-24 lg:grid-cols-[0.9fr_1.1fr]">
+      <section
+        id="for-creators"
+        className="relative overflow-hidden border-t border-border"
+      >
+        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-teal-100 via-surface-100 to-blue-100" />
+        <div className="pointer-events-none absolute -left-24 top-4 -z-10 h-72 w-72 rounded-full bg-teal-400/25 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 bottom-4 -z-10 h-80 w-80 rounded-full bg-blue-400/25 blur-3xl" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-200/30 blur-3xl" />
+        <div className="relative mx-auto grid max-w-6xl gap-12 px-6 py-28 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
               For creators
             </p>
-            <h2 className="mt-3 text-[30px] font-bold leading-tight tracking-tight text-foreground sm:text-[38px]">
+            <h2 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
               Built for the way creators actually earn.
             </h2>
-            <p className="mt-4 max-w-md text-[15px] leading-relaxed text-ink-600">
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-600">
               Whether you post to a few hundred followers or a few hundred
               thousand, you promote real products, keep control over what you
               recommend, and always know exactly what you&apos;ll be paid.
             </p>
             <Link
               href="/sign-up"
-              className="mt-8 inline-flex items-center gap-3 rounded-full bg-[#0f1115] py-2 pl-6 pr-2 text-sm font-semibold text-white"
+              className="mt-8 inline-flex items-center gap-3 rounded-full bg-teal-600 py-2 pl-6 pr-2 text-sm font-semibold text-white"
             >
               Create your account
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#c9f24a] text-[#0f1115]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-teal-600">
                 <ArrowUpRight className="h-4 w-4" />
               </span>
             </Link>
@@ -426,13 +507,14 @@ export default function Home() {
               return (
                 <div
                   key={point.title}
-                  className="flex items-start gap-4 rounded-[20px] border border-border bg-card p-5 shadow-card"
+                  className="relative flex items-start gap-4 overflow-hidden rounded-3xl border border-border bg-card p-5 shadow-card transition-transform hover:-translate-y-1"
                 >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-teal-100 text-teal-700">
+                  <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-teal-500/10 blur-2xl" />
+                  <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-100 text-teal-700">
                     <Icon className="h-5 w-5" />
                   </span>
-                  <div>
-                    <p className="text-[15px] font-bold text-foreground">
+                  <div className="relative">
+                    <p className="text-base font-bold text-foreground">
                       {point.title}
                     </p>
                     <p className="mt-1 text-sm leading-relaxed text-ink-600">
@@ -447,22 +529,22 @@ export default function Home() {
       </section>
 
       {/* ============ FINAL CTA ============ */}
-      <section className="mx-auto max-w-6xl px-6 py-24">
-        <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#1f5fd0] via-[#4b8fe0] to-[#7fc0ea] px-8 py-16 text-center text-white sm:px-16">
+      <section className="mx-auto max-w-6xl px-6 py-28">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-700 via-teal-600 to-teal-500 px-8 py-16 text-center text-white sm:px-16">
           <Sparkles className="pointer-events-none absolute -left-8 -top-8 h-56 w-56 text-white/10" />
-          <h2 className="relative mx-auto max-w-2xl text-[30px] font-bold leading-tight tracking-tight sm:text-[42px]">
+          <h2 className="relative mx-auto max-w-2xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
             Start earning from the content you already make.
           </h2>
-          <p className="relative mx-auto mt-4 max-w-lg text-[15px] text-white/85">
+          <p className="relative mx-auto mt-4 max-w-lg text-sm text-white/85">
             Continue with Google or a 6-digit email code. No fees, no password.
           </p>
           <div className="relative mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link
               href="/sign-up"
-              className="group inline-flex items-center gap-3 rounded-full bg-[#0f1115] py-2 pl-6 pr-2 text-sm font-semibold text-white"
+              className="group inline-flex items-center gap-3 rounded-full bg-white py-2 pl-6 pr-2 text-sm font-semibold text-teal-700"
             >
               Get started free
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#c9f24a] text-[#0f1115] transition-transform group-hover:rotate-45">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-600 text-white transition-transform group-hover:rotate-45">
                 <ArrowUpRight className="h-4 w-4" />
               </span>
             </Link>
@@ -483,8 +565,8 @@ export default function Home() {
             <div>
               <div className="flex items-center gap-2.5">
                 <BrandMark className="h-9 w-9 text-sm" />
-                <span className="text-[17px] font-bold tracking-tight">
-                  Binoregn<span className="text-[#c9f24a]">.</span>
+                <span className="text-lg font-bold tracking-tight">
+                  Binoregn<span className="text-teal-500">.</span>
                 </span>
               </div>
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">
@@ -494,10 +576,10 @@ export default function Home() {
               </p>
               <Link
                 href="/sign-up"
-                className="mt-6 inline-flex items-center gap-3 rounded-full bg-[#c9f24a] py-2 pl-5 pr-2 text-sm font-semibold text-[#0f1115]"
+                className="mt-6 inline-flex items-center gap-3 rounded-full bg-teal-600 py-2 pl-5 pr-2 text-sm font-semibold text-white"
               >
                 Get started
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0f1115] text-[#c9f24a]">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-teal-600">
                   <ArrowUpRight className="h-4 w-4" />
                 </span>
               </Link>
