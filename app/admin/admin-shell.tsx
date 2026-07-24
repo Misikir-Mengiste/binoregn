@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { AdminSidebar } from "./admin-sidebar";
-import { BrandMark } from "@/components/logo";
+import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -20,10 +20,7 @@ export function AdminShell({
     <div className="min-h-screen bg-surface-100">
       <div className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 lg:hidden">
         <div className="flex items-center gap-2.5">
-          <BrandMark className="h-9 w-9 text-sm" />
-          <span className="text-sm font-semibold text-foreground">
-            Binoregn<span className="text-teal-600">.</span>
-          </span>
+          <Logo className="h-7" />
         </div>
         <Button
           variant="outline"

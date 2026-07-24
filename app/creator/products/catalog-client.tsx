@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/search-input";
-import { StatusBadge } from "@/components/status-badge";
 import { CopyButton } from "@/components/copy-button";
+import { RichText } from "@/components/rich-text";
 import { cn } from "@/lib/utils";
 
 type CatalogProduct = {
@@ -26,6 +26,18 @@ type CatalogProduct = {
   returns: string[];
   applicationStatus: string | null;
   affiliateLinkSlug: string | null;
+};
+
+// Commission-request status shown as a colored banner on the top of each
+// product card. null status (never applied) shows no banner — an Apply
+// button appears instead.
+const PROMOTION_STATUS: Record<
+  string,
+  { label: string; icon: string; bar?: string; text?: string }
+> = {
+  APPROVED: { label: "Promoting", icon: "", text: "text-teal-600" },
+  PENDING: { label: "Pending", icon: "", text: "text-orange-500" },
+  REJECTED: { label: "Not approved", icon: "✕", bar: "bg-red-500" },
 };
 
 // Fixed ETB price buckets — only those with matching products are shown,
@@ -470,52 +482,65 @@ export function CatalogClient({
           {/* Product grid */}
           {products.length > 0 ? (
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
-              {products.map((product) => (
-                <div
-                  key={product.id}
-                  className="group flex cursor-pointer flex-col rounded-[14px] border border-border bg-card p-3 shadow-card transition-shadow hover:shadow-md"
-                  onClick={() => setPreviewId(product.id)}
-                >
-                  <div className="overflow-hidden rounded-[10px] bg-surface-100">
-                    {product.imageUrls[0] ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={product.imageUrls[0]}
-                        alt=""
-                        className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.03]"
-                      />
-                    ) : (
-                      <div className="aspect-square w-full bg-teal-100" />
+              {products.map((product) => {
+                const promo = product.applicationStatus
+                  ? PROMOTION_STATUS[product.applicationStatus]
+                  : null;
+                return (
+                  <div
+                    key={product.id}
+                    className="group flex cursor-pointer flex-col overflow-hidden rounded-[14px] border border-border bg-card p-3 shadow-card transition-shadow hover:shadow-md"
+                    onClick={() => setPreviewId(product.id)}
+                  >
+                    {promo && promo.bar && (
+                      <div
+                        className={cn(
+                          "-mx-3 -mt-3 mb-3 flex items-center justify-center gap-1.5 rounded-t-[14px] py-2.5 text-sm font-semibold text-white",
+                          promo.bar,
+                        )}
+                      >
+                        {promo.icon && <span aria-hidden>{promo.icon}</span>}
+                        {promo.label}
+                      </div>
                     )}
-                  </div>
-                  <h3 className="mt-3 text-sm font-semibold text-foreground">
-                    {product.name}
-                  </h3>
-                  {product.description && (
-                    <p className="mt-1 line-clamp-2 text-xs text-ink-400">
-                      {product.description}
-                    </p>
-                  )}
-                  <div className="mt-3 flex flex-col gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[15px] font-bold text-foreground">
-                        {product.commissionBirr.toLocaleString()} ETB
-                      </p>
-                      <p className="text-[11px] text-ink-400">Your commission</p>
-                    </div>
-                    <div
-                      className="w-full"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      {product.applicationStatus === "APPROVED" &&
-                      product.affiliateLinkSlug ? (
-                        <CopyButton
-                          path={`/p/${creatorSlug}/${product.affiliateLinkSlug}`}
-                          className="w-full"
+                    {promo && promo.text && (
+                      <div
+                        className={cn(
+                          "mb-2 text-center text-sm font-semibold",
+                          promo.text,
+                        )}
+                      >
+                        {promo.label}
+                      </div>
+                    )}
+                    <div className="overflow-hidden rounded-[10px] bg-surface-100">
+                      {product.imageUrls[0] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={product.imageUrls[0]}
+                          alt=""
+                          className="aspect-square w-full object-cover transition-transform group-hover:scale-[1.03]"
                         />
-                      ) : product.applicationStatus ? (
-                        <StatusBadge status={product.applicationStatus} />
                       ) : (
+                        <div className="aspect-square w-full bg-teal-100" />
+                      )}
+                    </div>
+                    <h3 className="mt-3 text-sm font-semibold text-foreground">
+                      {product.name}
+                    </h3>
+                    <div className="mt-2 flex items-baseline justify-between gap-2">
+                      <p className="text-base font-bold text-foreground">
+                        ETB {product.priceBirr.toLocaleString()}
+                      </p>
+                      <p className="text-sm font-semibold text-teal-600">
+                        +ETB {product.commissionBirr.toLocaleString()}
+                      </p>
+                    </div>
+                    {product.applicationStatus === null && (
+                      <div
+                        className="mt-3"
+                        onClick={(event) => event.stopPropagation()}
+                      >
                         <Button
                           size="sm"
                           className="h-8 w-full rounded-[8px]"
@@ -524,11 +549,11 @@ export function CatalogClient({
                         >
                           {applyingId === product.id ? "Applying…" : "Apply"}
                         </Button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="rounded-[14px] border border-border bg-card p-10 text-center text-sm text-muted-foreground shadow-card">
@@ -618,10 +643,15 @@ export function CatalogClient({
                     </span>
                   ) : null}
                   {previewProduct.description && (
-                    <p className="text-sm text-ink-600">
-                      {previewProduct.description}
-                    </p>
+                    <RichText html={previewProduct.description} />
                   )}
+                  {previewProduct.applicationStatus === "APPROVED" &&
+                  previewProduct.affiliateLinkSlug ? (
+                    <CopyButton
+                      path={`/p/${creatorSlug}/${previewProduct.affiliateLinkSlug}`}
+                      className="mt-1 w-full"
+                    />
+                  ) : null}
                 </div>
 
                 {previewProduct.applicationStatus === null && (

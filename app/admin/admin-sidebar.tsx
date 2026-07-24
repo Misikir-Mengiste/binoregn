@@ -16,7 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { InitialsAvatar } from "@/components/initials-avatar";
-import { BrandMark } from "@/components/logo";
+import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
 const MAIN_NAV = [
@@ -48,10 +48,7 @@ export function AdminSidebar({
   return (
     <nav className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col border-r border-border bg-card">
       <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
-        <BrandMark className="h-9 w-9 text-sm" />
-        <span className="truncate text-[15px] font-bold text-foreground">
-          Binoregn<span className="text-teal-600">.</span>
-        </span>
+        <Logo className="h-8" />
       </div>
 
       <div className="px-4 pb-5">

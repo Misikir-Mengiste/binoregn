@@ -9,7 +9,7 @@ import { Mail, MoveRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BrandMark } from "@/components/logo";
+import { Logo } from "@/components/logo";
 
 type CodeStep = "email" | "code";
 type Variant = "sign-in" | "sign-up";
@@ -150,11 +150,8 @@ export function AuthEntry({ variant }: { variant: Variant }) {
       <div className="pointer-events-none absolute -right-20 bottom-4 -z-10 h-80 w-80 rounded-full bg-blue-400/25 blur-3xl" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-200/30 blur-3xl" />
 
-      <Link href="/" className="mb-6 flex items-center gap-2.5">
-        <BrandMark className="h-9 w-9 text-sm" />
-        <span className="text-[16px] font-bold text-foreground">
-          Binoregn<span className="text-teal-600">.</span>
-        </span>
+      <Link href="/" className="mb-6 flex items-center">
+        <Logo className="h-9" />
       </Link>
 
       <div className="relative w-full max-w-sm rounded-[18px] border border-white/60 bg-card/90 px-6 py-8 shadow-card backdrop-blur">
