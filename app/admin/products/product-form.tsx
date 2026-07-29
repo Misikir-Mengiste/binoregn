@@ -49,6 +49,8 @@ type ProductFormValues = {
   shippingArrives: string;
   commissionBirr: string;
   imageUrls: string[];
+  stock: string;
+  isPublished: boolean;
 };
 
 // Delivery Options values pre-filled when CREATING a product (admin can
@@ -95,6 +97,8 @@ function toFormValues(product?: ProductWithExtras): ProductFormValues {
     shippingArrives: product?.shippingArrives ?? "",
     commissionBirr: product ? String(product.commissionBirr) : "",
     imageUrls: product?.imageUrls ?? [],
+    stock: product ? String(product.stock) : "100",
+    isPublished: product ? product.isPublished : true,
   };
 }
 
@@ -230,6 +234,8 @@ export function ProductForm({
         shippingArrives: values.shippingArrives || undefined,
         commissionBirr: Number(values.commissionBirr),
         imageUrls: values.imageUrls,
+        stock: Number(values.stock),
+        isPublished: values.isPublished,
       };
       const response = await fetch(
         product ? `/api/admin/products/${product.id}` : "/api/admin/products",
@@ -387,7 +393,47 @@ export function ProductForm({
                   }
                 />
               </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="stock" className="text-ink-600">
+                  Stock
+                </Label>
+                <Input
+                  id="stock"
+                  type="number"
+                  min={0}
+                  required
+                  className="h-10 rounded-[8px]"
+                  value={values.stock}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, stock: e.target.value }))
+                  }
+                />
+              </div>
             </div>
+          </FormCard>
+
+          <FormCard title="Visibility">
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-border"
+                checked={values.isPublished}
+                onChange={(e) =>
+                  setValues((v) => ({ ...v, isPublished: e.target.checked }))
+                }
+              />
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium text-foreground">
+                  Published
+                </span>
+                <span className="text-xs text-ink-400">
+                  Unpublished products (and any at 0 stock, automatically)
+                  are hidden from the creator product catalog and from
+                  their own public storefront page — existing affiliate
+                  links stay on record but stop resolving.
+                </span>
+              </span>
+            </label>
           </FormCard>
 
           <FormCard title="Delivery Options">

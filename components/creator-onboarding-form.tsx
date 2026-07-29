@@ -200,13 +200,6 @@ export function CreatorOnboardingForm({
 
       {step === 2 && (
         <div className="mt-6 flex flex-col gap-5">
-          <button
-            type="button"
-            className="text-sm text-ink-600"
-            onClick={() => setStep(1)}
-          >
-            ← Back
-          </button>
           <div>
             <h1 className="text-xl font-bold text-foreground">Your creator presence</h1>
             <p className="mt-1 text-sm text-ink-600">Where and what do you create?</p>
@@ -271,26 +264,29 @@ export function CreatorOnboardingForm({
             </select>
           </div>
 
-          <Button
-            type="button"
-            className="h-12 rounded-[14px]"
-            onClick={() => setStep(3)}
-          >
-            Continue
-            <MoveRight className="ml-2 h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 flex-1 rounded-[14px]"
+              onClick={() => setStep(1)}
+            >
+              ← Back
+            </Button>
+            <Button
+              type="button"
+              className="h-12 flex-[2] rounded-[14px]"
+              onClick={() => setStep(3)}
+            >
+              Continue
+              <MoveRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
 
       {step === 3 && (
         <div className="mt-6 flex flex-col gap-5">
-          <button
-            type="button"
-            className="text-sm text-ink-600"
-            onClick={() => setStep(2)}
-          >
-            ← Back
-          </button>
           <div>
             <h1 className="text-xl font-bold text-foreground">How you&apos;ll get paid</h1>
             <p className="mt-1 text-sm text-ink-600">We&apos;ll send your commissions here.</p>
@@ -394,26 +390,29 @@ export function CreatorOnboardingForm({
             </div>
           )}
 
-          <Button
-            type="button"
-            className="h-12 rounded-[14px]"
-            onClick={() => setStep(4)}
-          >
-            Continue
-            <MoveRight className="ml-2 h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 flex-1 rounded-[14px]"
+              onClick={() => setStep(2)}
+            >
+              ← Back
+            </Button>
+            <Button
+              type="button"
+              className="h-12 flex-[2] rounded-[14px]"
+              onClick={() => setStep(4)}
+            >
+              Continue
+              <MoveRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
 
       {step === 4 && (
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-5">
-          <button
-            type="button"
-            className="text-sm text-ink-600"
-            onClick={() => setStep(3)}
-          >
-            ← Back
-          </button>
           <div>
             <h1 className="text-xl font-bold text-foreground">Review & submit</h1>
             <p className="mt-1 text-sm text-ink-600">
@@ -532,13 +531,23 @@ export function CreatorOnboardingForm({
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <Button
-            type="submit"
-            className="h-12 rounded-[14px]"
-            disabled={!agreed || loading}
-          >
-            {loading ? "Submitting…" : "Submit application"}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 flex-1 rounded-[14px]"
+              onClick={() => setStep(3)}
+            >
+              ← Back
+            </Button>
+            <Button
+              type="submit"
+              className="h-12 flex-[2] rounded-[14px]"
+              disabled={!agreed || loading}
+            >
+              {loading ? "Submitting…" : "Submit application"}
+            </Button>
+          </div>
         </form>
       )}
     </div>

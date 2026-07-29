@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AdminShell } from "./admin-shell";
+import { getAdminNotifications } from "@/lib/admin-notifications";
 
 export default async function AdminLayout({
   children,
@@ -23,5 +24,11 @@ export default async function AdminLayout({
     );
   }
 
-  return <AdminShell email={session.user.email ?? ""}>{children}</AdminShell>;
+  const notifications = await getAdminNotifications();
+
+  return (
+    <AdminShell email={session.user.email ?? ""} notifications={notifications}>
+      {children}
+    </AdminShell>
+  );
 }

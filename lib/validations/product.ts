@@ -41,6 +41,8 @@ export const createProductSchema = z.object({
   shippingArrives: z.string().trim().min(1).max(200).optional(),
   commissionBirr: z.number().int().positive(),
   imageUrls: z.array(imageRef).default([]),
+  stock: z.number().int().nonnegative().default(100),
+  isPublished: z.boolean().default(true),
 });
 
 export const updateProductSchema = createProductSchema.partial();

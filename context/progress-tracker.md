@@ -5,6 +5,206 @@ change.
 
 ## Current Phase
 
+- **2026-07-29 — Product publish/unpublish + stock, with auto-hide on
+  0 stock.** New concept, didn't exist before: `Product.stock` (Int,
+  `@default(100)` — the default only matters for the migration
+  backfill on pre-existing rows, so they don't all read as
+  out-of-stock the moment the column appears) and
+  `Product.isPublished` (Boolean, `@default(true)`) added via
+  migration `20260728210735_add_product_stock_and_published`.
+  Design: visibility is *computed at read time* as `isPublished &&
+  stock > 0` everywhere a product is shown to a creator or the
+  public — there's no separate "auto-unpublished" state ever
+  written. This was a deliberate choice over toggling `isPublished`
+  off when stock hits 0: it means raising stock back above 0 makes
+  the product reappear immediately with zero extra logic, and a
+  manual unpublish (stock still positive) can never get silently
+  clobbered by a later stock change, since the two fields are never
+  cross-written. Confirmed with the user before building: stock
+  decrements by `Order.quantity` only when an order reaches
+  Delivered (not at checkout — a placed order can still be
+  cancelled/returned before then), and admin raising stock back up
+  must bring the product back into the creator catalog and public
+  page automatically (satisfied for free by the read-time formula
+  above). Where this landed: (1) `lib/commission/index.ts`'s
+  `maybeCreateCommission` — already the single idempotent
+  "just-became-Delivered" trigger point (guarded by "no Commission
+  row yet") — now also decrements `product.stock` by
+  `order.quantity` (floored at 0) in the same pass, since both are
+  gated by the identical one-time event; renamed nothing, just
+  extended the function and its comment. (2)
+  `lib/validations/product.ts` — `createProductSchema` gained
+  `stock` and `isPublished`; `updateProductSchema` is still just
+  `.partial()` of it, so `PATCH /api/admin/products/[id]` needed
+  zero route changes to support `{ isPublished: false }` or `{
+  stock: N }` calls. (3) Visibility filters added: `app/creator/
+  products/page.tsx` catalog query, `app/(public)/p/[creator]/
+  [slug]/page.tsx` (both the main product — 404s via `notFound()`
+  if hidden — and the "More from this creator" recommendations
+  query), `app/(public)/p/[creator]/[slug]/order/page.tsx` (same
+  404 rule, since a buyer could hit this checkout page directly),
+  and `app/api/public/orders/route.ts` (rejects with the same
+  generic "Link not found" 404 as a nonexistent link, in case the
+  API is hit directly bypassing the UI). Existing affiliate
+  links/applications for a hidden product are left alone — they
+  stay on record, only the live storefront page stops resolving.
+  (4) Admin UI: `app/admin/products/product-form.tsx` gained a
+  required Stock number input (Pricing card) and a "Published"
+  checkbox (new Visibility card, with inline copy explaining the
+  auto-hide-at-0-stock rule) — checked via `PATCH` on `product.id`.
+  `app/admin/products/products-client.tsx` gained a
+  Published/Unpublished + stock-count badge pair and a one-click
+  Publish/Unpublish button per product card (no need to open the
+  full edit form just to toggle visibility), using the same PATCH
+  endpoint. Verified live against the real dev DB end-to-end: reset
+  a real product to `stock: 1`, hit `PATCH .../fulfillment` with
+  `DELIVERED` on a real undelivered order for it — confirmed stock
+  dropped 1→0 automatically, the storefront page 404'd, and the
+  product vanished from a direct `findMany({ where: { isPublished:
+  true, stock: { gt: 0 } } })` query (creator catalog's exact
+  query). Then `PATCH`'d stock to 5 — storefront came back to 200
+  immediately, no other write needed. Then manually toggled
+  `isPublished` false/true independent of stock — 404 then 200,
+  confirming the two conditions are genuinely independent. Reverted
+  all test mutations (product stock/publish state, the order's
+  delivery/fulfillment/cashReconciled fields, and deleted the
+  test-induced Commission row) back to their exact original values
+  afterward. Also had to restart the dev server mid-session —
+  Turbopack had cached the pre-migration Prisma client and was
+  throwing `PrismaClientValidationError: Unknown field isPublished`
+  until restarted; `prisma generate` alone wasn't enough. `tsc
+  --noEmit` clean throughout.
+
+- **2026-07-28 — Admin notifications bell added.** Admin previously
+  had no equivalent of the creator's notifications bell
+  (`app/creator/notifications-bell.tsx` +
+  `lib/creator-notifications.ts`), and `AdminShell` had no
+  persistent header at all (only a mobile-only top bar with a menu
+  button, no desktop header). Added: (1) `lib/admin-notifications.ts`
+  — `getAdminNotifications()` returns an action queue (not a
+  decision-history feed like the creator one) of everything
+  currently PENDING and awaiting an admin decision: product
+  Applications, creator onboarding submissions
+  (`creatorProfileStatus: "PENDING"` + onboarding completed), and
+  Withdrawal requests — mirrors the "Pending" counts already shown
+  on the Applications/Creators/Withdrawals list pages. Each item
+  links to where it's actioned (`/admin/applications`,
+  `/admin/creators/[id]`, `/admin/withdrawals`). (2)
+  `app/admin/notifications-bell.tsx` — adapted from the creator
+  bell (same localStorage-only "seen" tracking, key
+  `admin-notifications-seen`), with items wrapped in `Link` so
+  clicking one navigates straight to the relevant queue. Tile
+  colors: teal for applications, blue for creators, peach for
+  withdrawals (`orange-100`/`orange-700` don't exist in
+  `app/globals.css` — only `--orange-500` — so withdrawals use the
+  existing `peach-100`/`peach-700` pending-badge colors instead).
+  (3) `app/admin/admin-shell.tsx` restructured to match
+  `app/creator/creator-shell.tsx`'s pattern — the header (with the
+  bell) is now inside the content column and sticky at all
+  breakpoints, not just a mobile-only bar. (4) `app/admin/
+  layout.tsx` fetches notifications server-side and passes them to
+  `AdminShell`, same as `app/creator/layout.tsx` does. Verified
+  live: signed in as the real admin (`natixr7@gmail.com`) via the
+  dev OTP bypass, confirmed `GET /admin` returns 200 with the bell
+  button in the header, and called `getAdminNotifications()`
+  directly against the real dev DB — returned 8 real pending
+  Applications sorted newest-first with correct creator/product
+  names. `tsc --noEmit` clean.
+
+- **2026-07-28 — Commission trigger collapsed to Delivered-alone;
+  creators can no longer see an order until it's Delivered.**
+  Supersedes the 2026-07-18 "two-step trigger" decision recorded
+  below — that entry is left in place for history but is no longer
+  current. (1) `lib/commission/index.ts`'s `maybeCreateCommission`
+  no longer requires `cashReconciledAt` to already be set: when an
+  order is Delivered and has no commission yet, it now auto-sets
+  `cashReconciledAt` (if null) in the same call, then creates the
+  Commission. This was a deliberate reversal of the COD fraud brake
+  (delivered/cash-collected could diverge) — confirmed explicitly
+  with the user before implementing, since it changes financial/
+  fraud-prevention behavior. The separate "Mark cash reconciled"
+  admin action/route (`.../cash-reconciled/route.ts`) still exists
+  for admins who want to record reconciliation independently/
+  earlier; it's just no longer a precondition. (2) Creator-facing
+  order counts are now filtered to `deliveryStatus: "DELIVERED"`
+  only, so an order stays invisible to its creator until admin
+  marks it delivered (it could still be cancelled/returned before
+  that, so surfacing it earlier would be premature): `app/creator/
+  page.tsx`'s `ordersCount` KPI, `app/creator/links/page.tsx`'s
+  per-link `_count.orders`, and `app/creator/orders/[id]/invoice/
+  page.tsx`'s lookup (added `deliveryStatus: "DELIVERED"` to the
+  `findFirst` `where`, as defense in depth — a creator could
+  otherwise reach an undelivered order's invoice directly by ID).
+  The Earnings page/creator home commission list were already
+  implicitly gated (Commission only exists once Delivered), so no
+  change needed there beyond the trigger change in (1). Verified
+  live against the real dev DB (port 4000, Postgres :5433): called
+  `maybeCreateCommission` directly on a real Delivered order that
+  had `cashReconciledAt: null` and no commission — confirmed it set
+  `cashReconciledAt` and created a `PENDING` commission in one call;
+  reverted that test commission/timestamp afterward. Also confirmed
+  via raw SQL that total vs. delivered order counts genuinely
+  diverge in the seed data (e.g. one creator: 5 total / 3
+  delivered), so the new filter is meaningfully different from the
+  old behavior. `tsc --noEmit` clean.
+
+- **2026-07-28 — Pending creators skip OTP and land on the
+  "application submitted" page; deactivate action added to the
+  admin creators list.** (1) `/api/auth/request-otp` now looks up
+  the email first: if it belongs to a `CREATOR` with
+  `creatorProfileStatus: "PENDING"`, it skips generating/sending a
+  code entirely and returns `{ sent: false, pending: true }`
+  instead of the usual `{ sent: true }` — no more re-sending them a
+  fresh code every time they hit sign-in, since they're headed to
+  the pending page regardless. This is a deliberate, narrow
+  carve-out from the route's existing "never let a caller
+  enumerate registered emails" rule, scoped only to the
+  pending-application case (approved creators and unregistered
+  emails still get the identical generic response). (2)
+  `components/auth/auth-entry.tsx`'s `requestCode()` checks
+  `body.data.pending` and `router.push("/onboarding/pending")`
+  instead of advancing to the code-entry step. (3)
+  `app/onboarding/pending/page.tsx` now tolerates no session — it
+  only runs its creator-record redirect checks when a session
+  exists; an unauthenticated visitor (routed here straight from the
+  email step) just sees the generic `PendingApprovalCard`, which
+  shows no personal data. (4) Added a "Deactivate creator"/status
+  badge action to the admin creators *list* page
+  (`app/admin/creators/creators-client.tsx` +
+  `app/admin/creators/page.tsx`), reusing the existing
+  `CreatorDeactivateButton` from the detail page — that
+  deactivate/reactivate feature (API routes, `isActive` +
+  `deactivatedAt`, sign-in block in `auth.ts`) already existed on
+  the per-creator detail page; this just surfaces it in the table
+  too. Verified live: `POST /api/auth/request-otp` returns
+  `{sent:false,pending:true}` for a temporarily-flagged pending
+  creator and the normal `{sent:true}` for an approved creator and
+  an unregistered email; `GET /onboarding/pending` renders
+  "Application submitted" with no session. Test DB rows reverted
+  after verification. `tsc --noEmit` clean.
+
+- **2026-07-28 — Public storefront product page UI polish (3 fixes).**
+  (1) "More from this creator" is now a horizontally-scrollable
+  snap row instead of a wrapping grid — `flex snap-x snap-mandatory
+  overflow-x-auto` with fixed-width `w-[180px] sm:w-[220px]
+  shrink-0 snap-start` cards, scrollbar hidden via a new
+  `.scrollbar-hide` utility in `app/globals.css`. Recommendation
+  query `take` bumped 4 → 10 so there's more to slide through.
+  (2) Product page background changed from `bg-surface-100` (grey)
+  to `bg-surface-0` (white). (3) Removed the grey mat/edge behind
+  the main product image in `product-gallery.tsx` — dropped the
+  inner `rounded-[20px] bg-surface-100` wrapper and the outer
+  card's `p-4`, so the image now fills a single `overflow-hidden
+  rounded-[24px] bg-surface-0 shadow-card` card edge-to-edge.
+  Thumbnail backgrounds left intact (they need a visible hit-area).
+  Files: `app/(public)/p/[creator]/[slug]/page.tsx`,
+  `app/(public)/p/[creator]/[slug]/product-gallery.tsx`,
+  `app/globals.css`. Verified in-browser on the running dev server
+  (port 4000): confirmed white background, no mat around the main
+  image, and the recommendations row overflows horizontally when
+  seeded with >4 items (temporary test links added and then
+  removed). `.scrollbar-hide` confirmed compiled into served CSS.
+
 - **2026-07-23 — Currency label switched from "Birr" to "ETB" project-wide
   (display only).** Replaced every user-facing `Birr` string with `ETB`
   across app/components/lib (` Birr` → ` ETB`, `(Birr)` → `(ETB)`, plus the
@@ -1363,3 +1563,34 @@ None currently open.
   windows, fraud/self-referral prevention, and full auth
   model details — pick that back up if those areas need
   deeper discussion before schema work.
+
+## Completed (2026-07-29 — Admin GMV & Commission Paid card)
+
+- Added `getGmvAndCommissionSummary()` to `lib/dashboard.ts`:
+  fetches delivered orders (for GMV = product.priceBirr *
+  quantity) and paid commissions, then buckets both into
+  weekly/monthly/yearly/lifetime totals using trailing windows
+  (last 7/30/365 days, matching the existing "last 365 days"
+  KPI captions rather than calendar-boundary buckets).
+- New client component `app/admin/gmv-commission-card.tsx`
+  renders GMV vs. Total Commission Paid side by side with a
+  period toggle; wired into `app/admin/page.tsx` right below the
+  KPI strip.
+- GMV is intentionally scoped to `DELIVERED` orders only (not
+  all orders) — this is the same point a `Commission` row is
+  created (see `CommissionStatus` comment in schema.prisma), so
+  GMV and commission-paid describe the same completed-sales
+  population rather than GMV including still-open orders.
+- Not visually verified in-browser: admin auth is OTP-only with
+  no dev bypass, so this session couldn't sign in to screenshot
+  it. Verified via `tsc --noEmit` (clean) and by mirroring the
+  existing query/formatting patterns already used on this page.
+
+## Completed (2026-07-29 — Onboarding form Back/Continue layout)
+
+- `components/creator-onboarding-form.tsx`: moved the "← Back"
+  link out of the top of steps 2-4 (previously its own
+  standalone text button below the progress bar) into the same
+  row as the step's Continue/Submit button, as an `outline`
+  variant `Button` (`flex-1`) next to the primary action
+  (`flex-[2]`). Step 1 has no Back (nothing to go back to).

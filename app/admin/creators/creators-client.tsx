@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
+import { CreatorDeactivateButton } from "./[id]/creator-deactivate-button";
 
 type CreatorRow = {
   id: string;
@@ -17,6 +18,7 @@ type CreatorRow = {
   creatorCategory: string | null;
   creatorProfileStatus: string | null;
   createdAt: Date;
+  isActive: boolean;
 };
 
 export function CreatorsClient({ creators }: { creators: CreatorRow[] }) {
@@ -104,7 +106,12 @@ export function CreatorsClient({ creators }: { creators: CreatorRow[] }) {
                     {creator.creatorCategory ?? "—"}
                   </td>
                   <td className="px-5 py-3.5">
-                    {creator.creatorProfileStatus === "APPROVED" ? (
+                    {!creator.isActive ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-pill bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
+                        <span className="h-1.5 w-1.5 rounded-pill bg-destructive" />
+                        Deactivated
+                      </span>
+                    ) : creator.creatorProfileStatus === "APPROVED" ? (
                       <span className="inline-flex items-center gap-1.5 rounded-pill bg-mint-100 px-2.5 py-1 text-xs font-medium text-mint-500">
                         <span className="h-1.5 w-1.5 rounded-pill bg-mint-500" />
                         Approved
@@ -139,6 +146,10 @@ export function CreatorsClient({ creators }: { creators: CreatorRow[] }) {
                             ? "Approving…"
                             : "Approve"}
                       </Button>
+                      <CreatorDeactivateButton
+                        creatorId={creator.id}
+                        isActive={creator.isActive}
+                      />
                     </div>
                   </td>
                 </tr>

@@ -2,8 +2,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   ArrowUpRight,
-  BadgeCheck,
-  Clock,
   Eye,
   Link2,
   Sparkles,
@@ -174,7 +172,12 @@ export default async function CreatorOverviewPage() {
         where: { creatorId },
         select: { id: true, viewCount: true },
       }),
-      prisma.order.count({ where: { creatorId } }),
+      // Orders aren't shown to creators until admin confirms delivery —
+      // an order can still be cancelled/returned before then, so a raw
+      // "you sold X" count would be premature and could be walked back.
+      prisma.order.count({
+        where: { creatorId, deliveryStatus: "DELIVERED" },
+      }),
     ]);
 
   const displayName =
@@ -330,24 +333,12 @@ export default async function CreatorOverviewPage() {
       </div>
 
       {/* Row 2: KPI cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard
           icon={Wallet}
           label="Lifetime earnings"
           value={birr(totalEarned)}
           tint="bg-teal-600 text-white"
-        />
-        <StatCard
-          icon={Clock}
-          label="Pending earnings"
-          value={birr(pendingBirr)}
-          tint="bg-peach-100 text-peach-700"
-        />
-        <StatCard
-          icon={BadgeCheck}
-          label="Paid earnings"
-          value={birr(paidBirr)}
-          tint="bg-mint-100 text-mint-500"
         />
         <StatCard
           icon={Link2}

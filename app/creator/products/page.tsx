@@ -17,6 +17,7 @@ export default async function CreatorProductsPage() {
     "creator";
 
   const products = await prisma.product.findMany({
+    where: { isPublished: true, stock: { gt: 0 } },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,

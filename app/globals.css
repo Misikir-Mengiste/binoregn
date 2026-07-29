@@ -136,6 +136,16 @@
   }
 }
 
+/* Hide scrollbars on horizontal snap-scroll rows (e.g. storefront
+   "More from this creator") while keeping the row scrollable. */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Mobile product preview bottom-sheet slide-up. */
 @keyframes sheet-up {
   from {

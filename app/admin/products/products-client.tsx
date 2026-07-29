@@ -9,6 +9,7 @@ import { KpiStrip } from "@/components/kpi-strip";
 import { TableToolbar } from "@/components/table-toolbar";
 import { Pagination } from "@/components/pagination";
 import { DeleteButton } from "@/components/delete-button";
+import { cn } from "@/lib/utils";
 import type { Product } from "@/generated/prisma/client";
 import { ProductForm } from "./product-form";
 
@@ -37,6 +38,7 @@ export function ProductsClient({
   const [query, setQuery] = useState("");
   const [linkFilter, setLinkFilter] = useState("ALL");
   const [page, setPage] = useState(1);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const products = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -73,6 +75,26 @@ export function ProductsClient({
       throw new Error(body?.error?.message ?? "Could not delete the product");
     }
     router.refresh();
+  }
+
+  async function togglePublished(id: string, next: boolean) {
+    setTogglingId(id);
+    try {
+      const response = await fetch(`/api/admin/products/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPublished: next }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error?.message ?? "Could not update the product");
+      }
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTogglingId(null);
+    }
   }
 
   const editingProduct = editingId
@@ -230,6 +252,36 @@ export function ProductsClient({
                     <span>{product._count.affiliateLinks} links</span>
                   </div>
                 </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-xs font-medium",
+                      product.isPublished
+                        ? "bg-mint-100 text-mint-500"
+                        : "bg-destructive/10 text-destructive",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-pill",
+                        product.isPublished ? "bg-mint-500" : "bg-destructive",
+                      )}
+                    />
+                    {product.isPublished ? "Published" : "Unpublished"}
+                  </span>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-xs font-medium",
+                      product.stock > 0
+                        ? "bg-surface-100 text-ink-600"
+                        : "bg-peach-100 text-peach-700",
+                    )}
+                  >
+                    {product.stock > 0
+                      ? `${product.stock.toLocaleString()} in stock`
+                      : "Out of stock"}
+                  </span>
+                </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Button
                     variant="outline"
@@ -241,6 +293,22 @@ export function ProductsClient({
                     }}
                   >
                     Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-[8px] bg-card"
+                    disabled={togglingId === product.id}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      togglePublished(product.id, !product.isPublished);
+                    }}
+                  >
+                    {togglingId === product.id
+                      ? "Saving…"
+                      : product.isPublished
+                        ? "Unpublish"
+                        : "Publish"}
                   </Button>
                   <div onClick={(event) => event.stopPropagation()}>
                     <DeleteButton

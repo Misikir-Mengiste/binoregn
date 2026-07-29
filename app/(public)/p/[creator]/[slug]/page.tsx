@@ -49,23 +49,30 @@ export default async function StorefrontPage({
           shippingDeliveryTime: true,
           shippingArrives: true,
           imageUrls: true,
+          isPublished: true,
+          stock: true,
         },
       },
     },
   });
 
-  if (!affiliateLink) {
+  // Unpublished (manually, or automatically once stock hits 0) means the
+  // product's own public page is gone too — same as if the link never
+  // existed. See prisma/schema.prisma's Product.isPublished comment.
+  if (!affiliateLink || !affiliateLink.product.isPublished || affiliateLink.product.stock <= 0) {
     notFound();
   }
 
   const { product } = affiliateLink;
   // Recommendations are this creator's OTHER affiliate links only — never
   // another creator's products, and never the creator's identity. If the
-  // creator has no other links, the section is hidden entirely.
+  // creator has no other links, the section is hidden entirely. Also
+  // excludes unpublished/out-of-stock products, same rule as above.
   const recommendedLinks = await prisma.affiliateLink.findMany({
     where: {
       creatorId: affiliateLink.creatorId,
       slug: { not: affiliateLink.slug },
+      product: { isPublished: true, stock: { gt: 0 } },
     },
     select: {
       slug: true,
@@ -79,7 +86,7 @@ export default async function StorefrontPage({
       },
     },
     orderBy: { createdAt: "desc" },
-    take: 4,
+    take: 10,
   });
 
   // A simple view counter, not commission-relevant state — a failed
@@ -127,7 +134,7 @@ export default async function StorefrontPage({
   ];
 
   return (
-    <div className="min-h-screen bg-surface-100">
+    <div className="min-h-screen bg-surface-0">
       <main className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-6 sm:px-6 lg:py-10">
         <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr] lg:items-start">
           <ProductGallery images={product.imageUrls} />
@@ -190,12 +197,12 @@ export default async function StorefrontPage({
             <h2 className="text-lg font-semibold text-foreground">
               More from this creator
             </h2>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
               {recommendedLinks.map((link) => (
                 <Link
                   key={link.slug}
                   href={`/p/${creator}/${link.slug}`}
-                  className="group rounded-[20px] border border-border bg-card p-4 shadow-card transition-transform hover:-translate-y-0.5"
+                  className="group w-[180px] shrink-0 snap-start rounded-[20px] border border-border bg-card p-4 shadow-card transition-transform hover:-translate-y-0.5 sm:w-[220px]"
                 >
                   <div className="overflow-hidden rounded-[16px] bg-surface-100">
                     {link.product.imageUrls[0] ? (

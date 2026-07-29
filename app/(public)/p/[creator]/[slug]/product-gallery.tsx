@@ -9,19 +9,17 @@ export function ProductGallery({ images }: { images: string[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-[24px] bg-surface-0 p-4 shadow-card">
-        <div className="overflow-hidden rounded-[20px] bg-surface-100">
-          {main ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={main}
-              alt=""
-              className="aspect-square w-full object-cover"
-            />
-          ) : (
-            <div className="aspect-square w-full bg-gradient-to-br from-teal-100 to-blue-100" />
-          )}
-        </div>
+      <div className="overflow-hidden rounded-[24px] bg-surface-0 shadow-card">
+        {main ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={main}
+            alt=""
+            className="aspect-square w-full object-cover"
+          />
+        ) : (
+          <div className="aspect-square w-full bg-gradient-to-br from-teal-100 to-blue-100" />
+        )}
       </div>
 
       {images.length > 1 && (

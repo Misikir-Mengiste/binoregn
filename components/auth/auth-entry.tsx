@@ -59,6 +59,11 @@ export function AuthEntry({ variant }: { variant: Variant }) {
         const body = await response.json().catch(() => null);
         throw new Error(body?.error?.message ?? "Could not send the code");
       }
+      const body = await response.json().catch(() => null);
+      if (body?.data?.pending) {
+        router.push("/onboarding/pending");
+        return;
+      }
       setCodeStep("code");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

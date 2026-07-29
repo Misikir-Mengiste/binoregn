@@ -4,9 +4,12 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { maybeCreateCommission, orderHasCommission } from "@/lib/commission";
 
-// Deliberately a separate action from PATCH .../delivery — the two
-// are independent, separately-timestamped admin actions per
-// architecture.md, not one combined step.
+// Optional, independent action for an admin who wants to record cash
+// reconciliation ahead of / separately from delivery. It's no longer a
+// precondition for the commission — Delivered alone auto-sets
+// cashReconciledAt if it isn't already set (lib/commission/index.ts) —
+// so this route mainly exists for admins who reconcile cash earlier
+// (e.g. on pickup) and want that timestamp to reflect the real time.
 export async function PATCH(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },

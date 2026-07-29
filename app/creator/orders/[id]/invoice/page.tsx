@@ -18,8 +18,10 @@ export default async function CreatorOrderInvoicePage({
   const creatorId = session!.user.id;
   const { id } = await params;
 
+  // Not shown to the creator until admin has confirmed delivery — see
+  // app/creator/page.tsx for why undelivered orders stay hidden.
   const order = await prisma.order.findFirst({
-    where: { id, creatorId },
+    where: { id, creatorId, deliveryStatus: "DELIVERED" },
     select: {
       id: true,
       buyerName: true,

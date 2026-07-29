@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { requestOtpSchema } from "@/lib/validations/otp";
 import { generateOtpCode, storeOtpCode } from "@/lib/otp";
@@ -22,6 +23,23 @@ export async function POST(request: NextRequest) {
   }
 
   const { email } = parsed.data;
+
+  // A creator with a pending application already knows their status —
+  // resending them a fresh code every time they hit "sign in" just spams
+  // their inbox for no reason, since they're headed to the pending page
+  // either way. Skip issuing a code entirely and tell the client to send
+  // them straight there. (This intentionally reveals pending status to an
+  // unauthenticated caller — a deliberate, narrower carve-out from the
+  // "never let a caller enumerate registered emails" rule below, scoped
+  // only to the pending-application case.)
+  const pendingCreator = await prisma.user.findFirst({
+    where: { email, role: "CREATOR", creatorProfileStatus: "PENDING" },
+    select: { id: true },
+  });
+  if (pendingCreator) {
+    return apiSuccess({ sent: false, pending: true });
+  }
+
   const code = generateOtpCode();
   await storeOtpCode(email, code);
 

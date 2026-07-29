@@ -1,9 +1,13 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getAdminDashboardSummary } from "@/lib/dashboard";
+import {
+  getAdminDashboardSummary,
+  getGmvAndCommissionSummary,
+} from "@/lib/dashboard";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
 import { OverviewOrders } from "./overview-orders";
+import { GmvCommissionCard } from "./gmv-commission-card";
 
 function pct(numerator: number, denominator: number) {
   return denominator === 0 ? 0 : Math.round((numerator / denominator) * 100);
@@ -16,6 +20,7 @@ export default async function AdminOverviewPage() {
 
   const [
     summary,
+    gmvAndCommission,
     recentOrders,
     totalOrders,
     deliveredOrders,
@@ -24,6 +29,7 @@ export default async function AdminOverviewPage() {
     totalProducts,
   ] = await Promise.all([
     getAdminDashboardSummary(),
+    getGmvAndCommissionSummary(),
     prisma.order.findMany({
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -93,6 +99,11 @@ export default async function AdminOverviewPage() {
             accent: "coral",
           },
         ]}
+      />
+
+      <GmvCommissionCard
+        gmv={gmvAndCommission.gmv}
+        commissionPaid={gmvAndCommission.commissionPaid}
       />
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.55fr_1fr]">

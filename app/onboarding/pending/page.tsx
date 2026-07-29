@@ -5,23 +5,28 @@ import { PendingApprovalCard } from "@/components/pending-approval-card";
 
 export default async function OnboardingPendingPage() {
   const session = await auth();
-  if (!session?.user) {
-    redirect("/sign-in");
-  }
-  if (session.user.role !== "CREATOR") {
-    redirect("/dashboard");
-  }
 
-  const creator = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { creatorProfileStatus: true, creatorOnboardingCompletedAt: true },
-  });
+  // Reachable two ways: (1) a signed-in creator mid-flow, checked against
+  // their real record below, or (2) an unauthenticated visitor who just
+  // entered the email of an existing pending application on the sign-in
+  // screen (see /api/auth/request-otp) — that case has no session to
+  // check, so it just gets the generic card as-is.
+  if (session?.user) {
+    if (session.user.role !== "CREATOR") {
+      redirect("/dashboard");
+    }
 
-  if (!creator?.creatorOnboardingCompletedAt) {
-    redirect("/onboarding");
-  }
-  if (creator.creatorProfileStatus === "APPROVED") {
-    redirect("/creator");
+    const creator = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { creatorProfileStatus: true, creatorOnboardingCompletedAt: true },
+    });
+
+    if (!creator?.creatorOnboardingCompletedAt) {
+      redirect("/onboarding");
+    }
+    if (creator.creatorProfileStatus === "APPROVED") {
+      redirect("/creator");
+    }
   }
 
   return (

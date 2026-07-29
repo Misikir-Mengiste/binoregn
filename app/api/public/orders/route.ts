@@ -44,11 +44,20 @@ export async function POST(request: NextRequest) {
       id: true,
       productId: true,
       creatorId: true,
-      product: { select: { colors: true, sizes: true } },
+      product: {
+        select: { colors: true, sizes: true, isPublished: true, stock: true },
+      },
     },
   });
 
-  if (!affiliateLink) {
+  // Same "Link not found" the UI would already 404 on (see
+  // app/(public)/p/[creator]/[slug]/page.tsx) — this just guards the
+  // API directly in case it's hit without going through that page.
+  if (
+    !affiliateLink ||
+    !affiliateLink.product.isPublished ||
+    affiliateLink.product.stock <= 0
+  ) {
     return apiError("Link not found", 404);
   }
 

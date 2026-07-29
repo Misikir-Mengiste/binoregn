@@ -206,6 +206,22 @@ model Product {
   shippingArrives       String?
   commissionBirr Int
   imageUrls      String[]
+  // Decremented by Order.quantity when an order reaches Delivered (not
+  // at checkout — a placed order can still be cancelled/returned before
+  // then). See lib/commission/index.ts, which is the single place this
+  // happens. Default 100 only matters for the migration backfill on
+  // pre-existing rows so they don't all read as out-of-stock the moment
+  // this column is added.
+  stock          Int      @default(100)
+  // Admin-controlled visibility toggle, independent of stock. A product
+  // is actually visible to creators (app/creator/products) and on its
+  // public storefront page (app/(public)/p/[creator]/[slug]) only when
+  // BOTH isPublished is true AND stock > 0 — that combined check is
+  // computed at read time everywhere it's shown, so there's no separate
+  // "auto-unpublished" state to reconcile: raising stock back above 0
+  // makes an isPublished product reappear immediately, with no write
+  // needed here.
+  isPublished    Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -346,8 +362,9 @@ model Order {
 // No NONE status: architecture.md's "Commission status" starts at
 // None, which is realized here as "no Commission row exists yet"
 // rather than a stored enum value — a row is only ever inserted
-// once the order is eligible (Delivered + cash reconciled), which
-// is also the point at which it enters Pending.
+// once the order is Delivered (which now also auto-marks
+// cashReconciledAt — see lib/commission/index.ts), which is also
+// the point at which it enters Pending.
 enum CommissionStatus {
   PENDING
   PAID

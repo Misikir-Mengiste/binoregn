@@ -18,12 +18,16 @@ export default async function OrderCheckoutPage({
           name: true,
           priceBirr: true,
           imageUrls: true,
+          isPublished: true,
+          stock: true,
         },
       },
     },
   });
 
-  if (!affiliateLink) {
+  // Same visibility rule as the product page — see
+  // app/(public)/p/[creator]/[slug]/page.tsx.
+  if (!affiliateLink || !affiliateLink.product.isPublished || affiliateLink.product.stock <= 0) {
     notFound();
   }
 

@@ -3,44 +3,47 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { AdminSidebar } from "./admin-sidebar";
+import { AdminNotificationsBell } from "./notifications-bell";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { AdminNotification } from "@/lib/admin-notifications";
 
 export function AdminShell({
   children,
   email,
+  notifications,
 }: {
   children: React.ReactNode;
   email: string;
+  notifications: AdminNotification[];
 }) {
   const [open, setOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-surface-100">
-      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 lg:hidden">
-        <div className="flex items-center gap-2.5">
-          <Logo className="h-7" />
-        </div>
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-9 w-9 rounded-[8px]"
-          onClick={() => setOpen(true)}
-          aria-label="Open sidebar"
-        >
-          <Menu className="h-4 w-4" />
-        </Button>
-      </div>
-
       <div className="flex min-h-screen">
         <div className="hidden lg:flex">
           <AdminSidebar email={email} />
         </div>
-        <div className="min-w-0 flex-1 overflow-x-hidden">
-          <div className="px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-            {children}
-          </div>
+        <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
+          <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-2.5 lg:hidden">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-[8px]"
+                onClick={() => setOpen(true)}
+                aria-label="Open sidebar"
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
+              <Logo className="h-7" />
+            </div>
+            <div className="hidden lg:block" />
+            <AdminNotificationsBell notifications={notifications} />
+          </header>
+          <div className="px-4 py-5 sm:px-6 lg:px-8 lg:py-7">{children}</div>
         </div>
       </div>
 

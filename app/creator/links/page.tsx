@@ -24,7 +24,11 @@ export default async function CreatorLinksPage() {
             imageUrls: true,
           },
         },
-        _count: { select: { orders: true } },
+        // Only count orders once admin has confirmed delivery — see
+        // app/creator/page.tsx for why undelivered orders stay hidden.
+        _count: {
+          select: { orders: { where: { deliveryStatus: "DELIVERED" } } },
+        },
       },
     }),
     prisma.user.findUnique({
