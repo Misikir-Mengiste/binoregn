@@ -1,7 +1,3 @@
-// Affiliate Marketplace — Prisma schema
-// Source of truth for the data model is context/architecture.md
-// and context/project-overview.md. Do not add fields or models
-// that aren't backed by those docs — see context/ai-workflow-rules.md.
 
 generator client {
   provider = "prisma-client"
@@ -12,28 +8,12 @@ datasource db {
   provider = "postgresql"
 }
 
-// ---------------------------------------------------------------
-// Identity / auth
-//
-// "Creator" and "Admin" (architecture.md's Auth and Access Model)
-// are both realized as a single User model distinguished by
-// `role`, rather than a separate Creator table — NextAuth (Auth.js)
-// needs one core identity model regardless of role, and there is
-// no data a Creator needs that Admin structurally can't also have.
-// Account / Session / VerificationToken follow the standard
-// Auth.js Prisma adapter shape (Google OAuth + email OTP both
-// need these).
-// ---------------------------------------------------------------
-
 enum Role {
   CREATOR
   ADMIN
 }
 
-// A creator's chosen destination for their offline commission
-// payout (architecture.md: no payment gateway — admin still pays
-// manually, this just tells admin where to send it). Not a
-// payment-gateway integration.
+
 enum PayoutMethod {
   BANK_TRANSFER
   TELEBIRR
@@ -66,13 +46,6 @@ enum CreatorProfileStatus {
   APPROVED
 }
 
-// Admin-managed picklist for the "Bank name" / wallet-provider choice
-// shown on the creator sign-up and settings payout forms — replaces
-// the previously hardcoded CREATOR_BANKS array so admin can add/
-// deactivate banks (and wallet providers like Telebirr) without a
-// code change. Purely reference data: it does not change how money
-// moves (still manual, admin-mediated payouts) or the PayoutMethod
-// enum's BANK_TRANSFER/TELEBIRR top-level split.
 enum PayoutOptionCategory {
   BANK
   WALLET
@@ -98,23 +71,13 @@ model User {
   image         String?
   role          Role      @default(CREATOR)
   createdAt     DateTime  @default(now())
-  // Admin "delete" on a creator account is a deactivation, not a hard
-  // delete — a creator typically has Orders/Commissions/Withdrawals
-  // tied to it via required FKs, which a real delete would break.
-  // Deactivated creators are blocked from signing in (see auth.ts).
   isActive      Boolean   @default(true)
   deactivatedAt DateTime?
-
-  // Payout destination — set by the creator via
-  // PATCH /api/creator/payout-method, read by admin on the
-  // commissions list. payoutBankName only applies to
-  // BANK_TRANSFER; null for TELEBIRR/CBE_BIRR.
   payoutMethod        PayoutMethod?
   payoutAccountName   String?
   payoutAccountNumber String?
   payoutBankName      String?
 
-  // Creator onboarding profile (multi-step sign-up UI).
   creatorUsername              String?               @unique
   creatorPhone                 String?
   creatorDisplayName           String?
@@ -129,9 +92,6 @@ model User {
 
   applications    Application[]
   affiliateLinks  AffiliateLink[]
-  // Orders reference the creator who gets attribution credit —
-  // named relation to disambiguate from any future buyer/admin
-  // relations on Order.
   ordersAsCreator Order[]         @relation("OrderCreator")
   commissions     Commission[]
   withdrawals     Withdrawal[]
@@ -173,10 +133,6 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// ---------------------------------------------------------------
-// Catalog
-// ---------------------------------------------------------------
-
 model Product {
   id             String   @id @default(cuid())
   name           String
@@ -206,21 +162,9 @@ model Product {
   shippingArrives       String?
   commissionBirr Int
   imageUrls      String[]
-  // Decremented by Order.quantity when an order reaches Delivered (not
-  // at checkout — a placed order can still be cancelled/returned before
-  // then). See lib/commission/index.ts, which is the single place this
-  // happens. Default 100 only matters for the migration backfill on
-  // pre-existing rows so they don't all read as out-of-stock the moment
-  // this column is added.
+  
   stock          Int      @default(100)
-  // Admin-controlled visibility toggle, independent of stock. A product
-  // is actually visible to creators (app/creator/products) and on its
-  // public storefront page (app/(public)/p/[creator]/[slug]) only when
-  // BOTH isPublished is true AND stock > 0 — that combined check is
-  // computed at read time everywhere it's shown, so there's no separate
-  // "auto-unpublished" state to reconcile: raising stock back above 0
-  // makes an isPublished product reappear immediately, with no write
-  // needed here.
+
   isPublished    Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -229,16 +173,6 @@ model Product {
   affiliateLinks AffiliateLink[]
   orders         Order[]
 }
-
-// ---------------------------------------------------------------
-// Creator applications and affiliate links
-//
-// Approval before link (architecture.md invariant 3): a creator
-// applies to a product, and only on admin approval does an
-// AffiliateLink get created for that creator+product pair — so
-// AffiliateLink has a required 1:1 link back to the Application
-// that authorized it, and is never created standalone.
-// ---------------------------------------------------------------
 
 enum ApplicationStatus {
   PENDING
@@ -255,26 +189,14 @@ model Application {
   status    ApplicationStatus @default(PENDING)
   createdAt DateTime          @default(now())
   decidedAt DateTime?
-  // Admin "delete" is a soft delete — architecture.md invariant 3 ties
-  // AffiliateLink creation to an Application's approval, so the row must
-  // keep existing even once hidden from the admin list.
   deletedAt DateTime?
 
   affiliateLink AffiliateLink?
-
-  // A creator can only have one application per product — prevents
-  // duplicate/spam re-applications. Not explicitly stated in
-  // architecture.md; a reasonable implementation-level invariant
-  // given links are already unique per creator+product.
   @@unique([creatorId, productId])
 }
 
 model AffiliateLink {
   id            String      @id @default(cuid())
-  // Unique public token used in the shareable URL
-  // (e.g. /p/[productId]?ref=slug). architecture.md doesn't name
-  // this field; it's the minimum needed for a "unique affiliate
-  // link" to exist as an actual URL.
   slug          String      @unique @default(cuid())
   creatorId     String
   creator       User        @relation(fields: [creatorId], references: [id])
@@ -283,19 +205,13 @@ model AffiliateLink {
   applicationId String      @unique
   application   Application @relation(fields: [applicationId], references: [id])
   createdAt     DateTime    @default(now())
-  // Incremented once per storefront page load
-  // (app/(public)/p/[creator]/[slug]/page.tsx) — a simple counter, not
-  // a per-visitor/deduped analytics event log.
+  
   viewCount     Int         @default(0)
 
   orders Order[]
 
   @@unique([creatorId, productId])
 }
-
-// ---------------------------------------------------------------
-// Orders and commissions
-// ---------------------------------------------------------------
 
 enum OrderDeliveryStatus {
   PLACED
@@ -317,54 +233,31 @@ model Order {
   product         Product       @relation(fields: [productId], references: [id])
   affiliateLinkId String
   affiliateLink   AffiliateLink @relation(fields: [affiliateLinkId], references: [id])
-  // Denormalized from affiliateLink.creatorId at checkout time and
-  // never updated afterward — architecture.md invariant 5 requires
-  // attribution to be immutable, so it lives directly on the order
-  // rather than only being reachable indirectly through the link.
   creatorId       String
   creator         User          @relation("OrderCreator", fields: [creatorId], references: [id])
 
-  // Buyer has no account (architecture.md: "No buyer accounts /
-  // no passwords") but COD delivery of a physical product still
-  // needs contact + delivery details captured at checkout.
   buyerName    String
   buyerPhone   String
   buyerAddress String
-  // City is required at checkout (validated in the app); nullable at the
-  // DB level so pre-existing orders migrate cleanly. buyerNotes and
-  // buyerEmail are the only optional buyer fields.
   buyerCity    String?
   buyerEmail   String?
   buyerNotes   String?
   quantity     Int           @default(1)
-  // Buyer's selected variant, chosen from product.colors/product.sizes at
-  // checkout. Null when the product doesn't define that dimension.
   color        String?
   size         String?
 
   deliveryStatus   OrderDeliveryStatus @default(PLACED)
   fulfillmentStatus OrderFulfillmentStatus @default(PLACED)
-  // null until the admin performs the separate "Mark Cash
-  // Reconciled" action (architecture.md Storage Model section).
+
   cashReconciledAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  // Admin "delete" is a soft delete — an Order is a financial/audit
-  // record (architecture.md invariant 4: status changes only through
-  // explicit admin actions) and may already have a Commission tied to
-  // it, so the row is never actually dropped.
   deletedAt DateTime?
 
   commission Commission?
 }
 
-// No NONE status: architecture.md's "Commission status" starts at
-// None, which is realized here as "no Commission row exists yet"
-// rather than a stored enum value — a row is only ever inserted
-// once the order is Delivered (which now also auto-marks
-// cashReconciledAt — see lib/commission/index.ts), which is also
-// the point at which it enters Pending.
 enum CommissionStatus {
   PENDING
   PAID
@@ -382,16 +275,11 @@ model Commission {
   order      Order            @relation(fields: [orderId], references: [id])
   creatorId  String
   creator    User             @relation(fields: [creatorId], references: [id])
-  // Snapshotted from product.commissionBirr at creation time so a
-  // later change to a product's commission amount never rewrites
-  // the amount owed on an already-created commission.
   amountBirr Int
   status     CommissionStatus @default(PENDING)
   createdAt  DateTime         @default(now())
   paidAt     DateTime?
-  // Admin "delete" is a soft delete — Commission is a financial ledger
-  // (architecture.md invariant 2: forward-only None→Pending→Paid), so a
-  // hard delete would erase money owed/paid history.
+
   deletedAt  DateTime?
 }
 
@@ -407,8 +295,5 @@ model Withdrawal {
   status       WithdrawalStatus @default(PENDING)
   createdAt    DateTime         @default(now())
   decidedAt    DateTime?
-  // Admin "delete" is a soft delete — a Withdrawal is a payout request
-  // record (architecture.md invariant 10: pending until approved or
-  // rejected), so the row stays for audit purposes even once hidden.
   deletedAt    DateTime?
 }
