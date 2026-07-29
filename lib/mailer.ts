@@ -31,3 +31,24 @@ export async function sendOrderTrackingEmail(email: string, trackingUrl: string)
     text: `Track your order progress here: ${trackingUrl}`,
   });
 }
+
+// Sent to every ADMIN user (there's no separate super-admin role — see
+// Role enum in schema.prisma) whenever a new order is placed.
+export async function sendNewOrderAdminEmail(
+  adminEmails: string[],
+  order: {
+    id: string;
+    buyerName: string;
+    productName: string;
+    priceBirr: number;
+    quantity: number;
+  },
+) {
+  if (adminEmails.length === 0) return;
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM,
+    to: adminEmails,
+    subject: `New order: ${order.productName}`,
+    text: `${order.buyerName} placed an order for ${order.quantity} x ${order.productName} (${order.priceBirr} ETB each).\n\nOrder ID: ${order.id}`,
+  });
+}

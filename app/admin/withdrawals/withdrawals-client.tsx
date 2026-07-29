@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Clock, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
@@ -35,7 +36,7 @@ function PayoutDetails({ withdrawal }: { withdrawal: WithdrawalRow }) {
     <div>
       <p className="font-semibold text-foreground">
         {withdrawal.payoutMethod === "BANK_TRANSFER" && withdrawal.payoutBankName
-          ? `${label} — ${withdrawal.payoutBankName}`
+          ? `${label} (${withdrawal.payoutBankName})`
           : label}
       </p>
       <p className="text-xs text-ink-400">
@@ -92,9 +93,9 @@ export function WithdrawalsClient({ withdrawals }: { withdrawals: WithdrawalRow[
       />
       <KpiStrip
         items={[
-          { label: "Pending", value: pendingCount.toLocaleString(), accent: "orange" },
-          { label: "Approved", value: approvedCount.toLocaleString(), accent: "mint" },
-          { label: "Rejected", value: rejectedCount.toLocaleString(), accent: "coral" },
+          { label: "Pending", value: pendingCount.toLocaleString(), icon: Clock, accent: "orange" },
+          { label: "Approved", value: approvedCount.toLocaleString(), icon: CheckCircle2, accent: "mint" },
+          { label: "Rejected", value: rejectedCount.toLocaleString(), icon: XCircle, accent: "coral" },
         ]}
       />
 

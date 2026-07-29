@@ -59,7 +59,7 @@ export default async function CreatorLinksPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="My Links"
-        description="Share these with buyers — you earn a commission on every completed order."
+        description="Share these with buyers. You earn a commission on every completed order."
       />
 
       <LinksListClient

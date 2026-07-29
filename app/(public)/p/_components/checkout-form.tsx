@@ -278,7 +278,7 @@ export function CheckoutForm({
               Back
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Placing order…" : "Place order — pay on delivery"}
+              {submitting ? "Placing order…" : "Place order (pay on delivery)"}
             </Button>
           </div>
         </>

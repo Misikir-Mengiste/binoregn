@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TrendingUp, BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PeriodTotals } from "@/lib/dashboard";
 
@@ -56,18 +57,26 @@ export function GmvCommissionCard({
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-[8px] border border-border p-4">
-          <p className="text-xs text-ink-400">GMV</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-ink-400">GMV</p>
+            <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-teal-100 text-teal-700">
+              <TrendingUp className="h-4 w-4" />
+            </span>
+          </div>
           <p className="mt-1 text-2xl font-bold tracking-tight text-foreground">
             {birr(gmv[period])}
           </p>
-          <div className="mt-2 h-[3px] w-10 rounded-pill bg-teal-500" />
         </div>
         <div className="rounded-[8px] border border-border p-4">
-          <p className="text-xs text-ink-400">Total Commission Paid</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-ink-400">Total Commission Paid</p>
+            <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-peach-100 text-peach-700">
+              <BadgeCheck className="h-4 w-4" />
+            </span>
+          </div>
           <p className="mt-1 text-2xl font-bold tracking-tight text-foreground">
             {birr(commissionPaid[period])}
           </p>
-          <div className="mt-2 h-[3px] w-10 rounded-pill bg-orange-500" />
         </div>
       </div>
     </div>

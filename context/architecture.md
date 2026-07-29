@@ -18,12 +18,12 @@
 | ------------------ | ---- | -------- |
 | `app/(public)/p/[creator]/[slug]` | Creator-attributed product landing page + no-payment checkout (built 2026-07-19) | Require buyer auth; mutate commission state; edit products; render creator identity (we only use the username in the URL, not in-page) |
 | `app/creator`      | Creator dashboard: browse products, apply to promote, view own links and earnings | Access other creators’ data; create/edit products; approve applications; change order/commission status |
-| `app/admin`        | Admin dashboard: product CRUD, application approve/reject, order status, mark commissions paid | Expose admin actions to creators; auto-trigger payouts or delivery |
+| `app/admin`        | Admin dashboard: product CRUD, application approve/reject, order status (marking an order Delivered auto-creates its commission as Paid — see invariant 2) | Expose admin actions to creators; auto-trigger delivery itself (no logistics webhook/cron) |
 | `app/sign-in`      | Shared sign-in entry (email OTP two-step, Google) for both creator and admin — not auth-gated itself | Contain role-specific dashboard UI |
 | `app/sign-up`      | Redirect into creator onboarding after sign-in | Create an `ADMIN` account |
 | `app/dashboard`    | Single role-aware redirect after any sign-in method | Render any UI of its own |
 | `app/api` (or Route Handlers colocated with features) | Validated mutations with auth/ownership checks | Bypass `lib/commission` for commission transitions; trust client role claims without server verification |
-| `lib/commission`   | Creating and transitioning commission status (None → Pending → Paid) based on `deliveryStatus` AND `cashReconciledAt` together | Be called from public checkout for commission creation before Delivered; transition to Pending on Delivered alone without cash reconciliation; contain unrelated UI or product CRUD |
+| `lib/commission`   | Creating a commission as Paid the moment `deliveryStatus` becomes Delivered (auto-setting `cashReconciledAt` alongside it); resolving any pre-2026-07-29 Pending commission to Paid | Be called from public checkout for commission creation before Delivered; contain unrelated UI or product CRUD |
 | `lib/auth-helpers.ts` | `requireCreator()`/`requireAdmin()` — API route session + role guards | Encode business commission rules |
 | `prisma`           | Schema, migrations, and entity relations           | Store binary image data |
 | `components/ui`    | Generated shadcn primitives (via `npx shadcn add`) | Hold domain business rules |
@@ -211,7 +211,7 @@ requests and the remaining balance after withdrawals.
 | ----- | --------------------- | ---------------- |
 | Buyer | No account | View creator-attributed product page; place no-payment order; optionally receive tracking link via email |
 | Creator | Google OAuth or email + 6-digit OTP (passwordless) | Browse catalog; apply to promote; view/copy own approved links; view own earnings (after admin approves the onboarding profile) |
-| Admin | Single fixed/seeded identity (not creator self-signup) | Product CRUD + image upload; approve/reject applications; set order status; mark commissions Paid |
+| Admin | Single fixed/seeded identity (not creator self-signup) | Product CRUD + image upload; approve/reject applications; set order status (Delivered auto-pays the commission); mark commissions Paid (only needed for pre-2026-07-29 Pending rows) |
 
 Ownership rules:
 
@@ -234,7 +234,7 @@ Not used in the MVP.
 The codebase must never violate these rules:
 
 1. **Admin-only catalog writes** — Only the admin can create or edit products. Creators never have write access to the product catalog.
-2. **Forward-only commission lifecycle** — Commission status moves only None → Pending → Paid. Pending is created only when an order is BOTH marked Delivered AND has its cash reconciled (`cashReconciledAt` set) — whichever of those two admin actions happens second is what triggers the transition to Pending. Cancelled or Returned orders never produce a commission, and a Delivered order with unreconciled cash stays at None.
+2. **Forward-only commission lifecycle** — Commission status moves only None → Paid; there is no standalone Pending state a new commission passes through. The Commission row (status Paid, `paidAt` set) is created the moment an order is marked Delivered (decided 2026-07-29, superseding the earlier Delivered→Pending→admin-Paid flow — admin wants delivery to auto-pay the creator rather than requiring a separate "Mark Paid" step). `cashReconciledAt` is auto-set at the same time if it wasn't already (decided 2026-07-28, superseding an even earlier Delivered+cash-reconciled two-step trigger). Cancelled or Returned orders never produce a commission. Pre-existing Pending commissions from before 2026-07-29 can still be moved to Paid via the admin "Mark Paid" action (`lib/commission`'s `markCommissionPaid`), but no new commission is ever created Pending. Note: no money actually moves through the app (no payment gateway — invariant 4); "Paid" records that the admin's offline payout is considered settled at delivery, not that a transaction was processed.
 3. **Approval before link** — An affiliate link is generated only after admin approval of that creator+product application — never before approval, and never for a rejected application.
 4. **Manual status transitions only** — Order and commission status changes are explicit admin actions. No payment gateway, logistics webhook, or cron job may trigger them in this MVP.
 5. **Immutable order attribution** — Creator attribution on an order is set at checkout and never reassigned afterward.

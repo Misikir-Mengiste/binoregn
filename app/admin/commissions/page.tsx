@@ -1,3 +1,4 @@
+import { Clock, Hash, BadgeCheck, CalendarCheck } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
@@ -60,21 +61,25 @@ export default async function AdminCommissionsPage() {
           {
             label: "Pending total",
             value: `${pendingAgg._sum.amountBirr ?? 0} ETB`,
+            icon: Clock,
             accent: "orange",
           },
           {
             label: "Pending count",
             value: pendingAgg._count.toLocaleString(),
+            icon: Hash,
             accent: "teal",
           },
           {
             label: "Paid total",
             value: `${paidAgg._sum.amountBirr ?? 0} ETB`,
+            icon: BadgeCheck,
             accent: "mint",
           },
           {
             label: "Paid this month",
             value: `${paidThisMonthAgg._sum.amountBirr ?? 0} ETB`,
+            icon: CalendarCheck,
             accent: "coral",
           },
         ]}

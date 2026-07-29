@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Binoregn — affiliate marketplace for creators",
+  title: "Binoregn: affiliate marketplace for creators",
   description:
     "Turn your influence into affiliate income. Promote products, share your link, and earn a fixed commission on every delivered order.",
 };

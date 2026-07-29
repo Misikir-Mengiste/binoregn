@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Plus, X } from "lucide-react";
+import { Eye, Plus, X, Package, Link2, Percent, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
 import { TableToolbar } from "@/components/table-toolbar";
 import { Pagination } from "@/components/pagination";
 import { DeleteButton } from "@/components/delete-button";
+import { RichText } from "@/components/rich-text";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/generated/prisma/client";
 import { ProductForm } from "./product-form";
@@ -167,24 +168,28 @@ export function ProductsClient({
             label: "Total Products",
             value: kpis.totalProducts.toLocaleString(),
             caption: "Products in your catalog",
+            icon: Package,
             accent: "teal",
           },
           {
             label: "Active Links",
             value: kpis.activeLinks.toLocaleString(),
             caption: "Approved affiliate links across all products",
+            icon: Link2,
             accent: "mint",
           },
           {
             label: "Avg. Commission",
             value: `${kpis.avgCommissionBirr.toLocaleString()} ETB`,
             caption: "Average commission per product",
+            icon: Percent,
             accent: "orange",
           },
           {
             label: "Pending Applications",
             value: kpis.pendingApplications.toLocaleString(),
             caption: "Awaiting your review",
+            icon: Clock,
             accent: "coral",
           },
         ]}
@@ -323,7 +328,7 @@ export function ProductsClient({
           {pageItems.length === 0 && (
             <div className="py-10 text-center text-sm text-muted-foreground">
               {initialProducts.length === 0
-                ? "No products yet — create your first one."
+                ? "No products yet. Create your first one."
                 : "No products match your search."}
             </div>
           )}
@@ -391,9 +396,7 @@ export function ProductsClient({
                     {previewProduct.priceBirr} ETB
                   </p>
                   {previewProduct.description && (
-                    <p className="text-sm text-ink-600">
-                      {previewProduct.description}
-                    </p>
+                    <RichText html={previewProduct.description} />
                   )}
                 </div>
 

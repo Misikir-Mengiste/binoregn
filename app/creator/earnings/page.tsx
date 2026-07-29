@@ -75,7 +75,7 @@ export default async function CreatorEarningsPage() {
         status: true,
         createdAt: true,
         paidAt: true,
-        order: { select: { id: true, product: { select: { name: true } } } },
+        order: { select: { product: { select: { name: true } } } },
       },
     }),
     prisma.withdrawal.findMany({
@@ -140,7 +140,6 @@ export default async function CreatorEarningsPage() {
       at: c.status === "PAID" && c.paidAt ? c.paidAt : c.createdAt,
       amountBirr: c.amountBirr,
       direction: "in" as const,
-      orderId: c.order.id,
     })),
     ...withdrawals.map((w) => ({
       id: `w-${w.id}`,
@@ -154,7 +153,6 @@ export default async function CreatorEarningsPage() {
         w.status === "APPROVED"
           ? ("out" as const)
           : ("neutral" as const),
-      orderId: null,
     })),
   ].sort((a, b) => b.at.getTime() - a.at.getTime());
 

@@ -62,7 +62,7 @@ const STEPS: { icon: LucideIcon; title: string; description: string }[] = [
     icon: ClipboardCheck,
     title: "Apply to promote",
     description:
-      "Pick the products that fit your audience and apply — each application is reviewed and approved.",
+      "Pick the products that fit your audience and apply. Each application is reviewed and approved.",
   },
   {
     icon: Link2,
@@ -90,7 +90,7 @@ const CREATOR_POINTS: { icon: LucideIcon; title: string; description: string }[]
       icon: ShieldCheck,
       title: "Promote what you believe in",
       description:
-        "Apply only to the products that fit your audience — you choose what to put your name behind.",
+        "Apply only to the products that fit your audience, so you choose what to put your name behind.",
     },
     {
       icon: LayoutDashboard,
@@ -104,7 +104,7 @@ const CREATOR_POINTS: { icon: LucideIcon; title: string; description: string }[]
 const STATS: { value: string; label: string; tone: "light" | "lime" | "dark" }[] =
   [
     { value: "12k+", label: "creators earning on the platform", tone: "light" },
-    { value: "100%", label: "transparent — see your commission before applying", tone: "lime" },
+    { value: "100%", label: "transparent: see your commission before applying", tone: "lime" },
     { value: "540+", label: "products ready to promote across niches", tone: "dark" },
     { value: "2.4M+", label: "ETB paid out to creators so far", tone: "light" },
   ];
@@ -131,7 +131,7 @@ export default function Home() {
     <div className="min-h-screen bg-background text-foreground">
       {/* ============ HERO ============ */}
       <section className="relative flex min-h-screen flex-col overflow-hidden rounded-b-3xl bg-gradient-to-br from-teal-700 via-teal-600 to-teal-500 pb-40 text-white">
-        <Sparkles className="pointer-events-none absolute -right-10 top-24 h-72 w-72 text-white/10" />
+        <Wallet className="pointer-events-none absolute -right-10 top-24 h-72 w-72 text-white/10" />
 
         {/* Floating frosted pill nav */}
         <header className="relative z-10 mx-auto mt-4 w-full max-w-6xl px-4">
@@ -292,7 +292,7 @@ export default function Home() {
             </div>
             <p className="relative mt-6 text-lg font-semibold leading-snug">
               Where creators turn an engaged audience into steady, predictable
-              income — one approved link at a time.
+              income, one approved link at a time.
             </p>
           </div>
 
@@ -531,7 +531,7 @@ export default function Home() {
       {/* ============ FINAL CTA ============ */}
       <section className="mx-auto max-w-6xl px-6 py-28">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-700 via-teal-600 to-teal-500 px-8 py-16 text-center text-white sm:px-16">
-          <Sparkles className="pointer-events-none absolute -left-8 -top-8 h-56 w-56 text-white/10" />
+          <Wallet className="pointer-events-none absolute -left-8 -top-8 h-56 w-56 text-white/10" />
           <h2 className="relative mx-auto max-w-2xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
             Start earning from the content you already make.
           </h2>
@@ -570,7 +570,7 @@ export default function Home() {
                 </span>
               </div>
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">
-                Turn your influence into affiliate income — promote products
+                Turn your influence into affiliate income. Promote products
                 you believe in and earn a fixed commission on every delivered
                 order.
               </p>

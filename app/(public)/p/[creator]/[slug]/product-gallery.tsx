@@ -24,14 +24,14 @@ export function ProductGallery({ images }: { images: string[] }) {
 
       {images.length > 1 && (
         <div className="rounded-[24px] bg-surface-0 p-4 shadow-card">
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+          <div className="flex gap-3 overflow-x-auto sm:gap-4">
             {images.map((url, index) => (
               <button
                 key={url}
                 type="button"
                 onClick={() => setActive(index)}
                 className={cn(
-                  "aspect-square overflow-hidden rounded-[16px] border-2 bg-surface-100",
+                  "aspect-square w-20 shrink-0 overflow-hidden rounded-[16px] border-2 bg-surface-100 sm:w-24",
                   index === active ? "border-teal-600" : "border-transparent",
                 )}
                 aria-label={`View image ${index + 1}`}

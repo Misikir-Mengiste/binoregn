@@ -315,7 +315,7 @@ export function OrdersClient({ orders: allOrders }: { orders: OrderRow[] }) {
                       )}
                       {locked && (
                         <p className="text-xs text-muted-foreground">
-                          Locked — a commission already exists for this order.
+                          Locked: a commission already exists for this order.
                         </p>
                       )}
                     </div>

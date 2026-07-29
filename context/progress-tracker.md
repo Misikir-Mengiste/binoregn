@@ -1594,3 +1594,94 @@ None currently open.
   row as the step's Continue/Submit button, as an `outline`
   variant `Button` (`flex-1`) next to the primary action
   (`flex-[2]`). Step 1 has no Back (nothing to go back to).
+
+## Completed (2026-07-29 — KpiStrip icon badges)
+
+- `components/kpi-strip.tsx`: `KpiItem` now requires an `icon:
+  LucideIcon`; the small colored underline dash below each KPI
+  value was replaced with an icon badge (`accent` still picks
+  the badge's background/text color pair, reusing the same
+  pastel tokens as `StatusBadge` — e.g. `orange` now renders as
+  peach since there's no dedicated orange-100/700 token).
+- Every KpiStrip caller was updated with a matching icon (Clock
+  for pending/new, CheckCircle2/BadgeCheck for
+  approved/paid/completed, XCircle for rejected/cancelled, plus
+  a semantic icon per label elsewhere — Package, Link2, Percent,
+  ShoppingBag, PiggyBank, TrendingUp, FileText, Hash,
+  CalendarCheck): admin home, Commissions, Withdrawals, Products,
+  Applications, Creators list, Orders, and both KpiStrips on the
+  Creator detail page.
+- `app/admin/gmv-commission-card.tsx` got the same treatment
+  (TrendingUp for GMV, BadgeCheck for Total Commission Paid)
+  instead of its own colored dash.
+
+## Completed (2026-07-29 — New-order admin notifications)
+
+- `lib/mailer.ts`: added `sendNewOrderAdminEmail(adminEmails, order)`
+  — sent to every `User` with `role: "ADMIN"` (schema.prisma's `Role`
+  enum has no separate super-admin role, so "superadmin and admin"
+  from the request is just every ADMIN row; today that's the single
+  `ADMIN_SEED_EMAIL` account, but it'll pick up any future admins).
+- `app/api/public/orders/route.ts`: after order creation, looks up
+  all ADMIN emails and fires the notification email. Same
+  best-effort try/catch as the existing buyer tracking email right
+  above it — a failed admin email must never fail checkout.
+- `lib/admin-notifications.ts`: added an `"ORDER"` notification type
+  alongside APPLICATION/CREATOR/WITHDRAWAL, querying the 8 most
+  recent `PLACED` (undelivered, non-deleted) orders so a new order
+  shows up in the admin bell as an action-queue item, same as
+  pending applications/withdrawals.
+- `app/admin/notifications-bell.tsx`: mapped `ORDER` to a
+  `ShoppingBag` icon on a mint tile (teal/blue/peach were already
+  taken by the other three types).
+- Verified end-to-end against the local dev DB: POSTed a real order
+  through `/api/public/orders`, confirmed it returned 201 with no
+  errors, then deleted the test order row afterward. SMTP in `.env`
+  points at real Gmail (not the local Mailpit catcher), so this did
+  send one live email to the seeded admin — worth checking that
+  inbox to confirm formatting looks right.
+
+## Completed (2026-07-29 — Commission auto-paid on delivery)
+
+- `lib/commission/index.ts`'s `maybeCreateCommission` now creates
+  the Commission directly as `status: "PAID"` with `paidAt: new
+  Date()`, instead of `PENDING`. Decided 2026-07-29, explicitly
+  requested by admin: delivery should auto-pay the creator rather
+  than leaving a separate "Mark Paid" step in the Commissions list.
+- This is a UI-level simplification only — no payment gateway
+  exists (COD, per architecture.md invariant 4), so "Paid" now
+  records that the admin's offline payout is considered settled at
+  the moment of delivery, not that a real transaction happened.
+- `markCommissionPaid` / `PATCH /api/admin/commissions/[id]/pay`
+  and the Commissions page's "Mark Paid" button were left in place
+  unchanged — they still work for any commission created before
+  this change (which would be PENDING), but no new commission will
+  ever need them.
+- Updated `context/architecture.md`: invariant 2, and the
+  `lib/commission`/`app/admin`/Admin-role rows in the responsibility
+  and actor tables, to describe the new Delivered→Paid flow. This
+  also fixed a pre-existing doc gap — those sections still described
+  the *original* two-step Delivered+cash-reconciled trigger, which
+  had already been superseded on 2026-07-28 but never written back
+  to architecture.md.
+- Verified with a throwaway script against the local dev DB (not
+  committed): created a test order, set it Delivered, called
+  `maybeCreateCommission`, confirmed the resulting row was
+  `status: "PAID"` with `paidAt` set, then deleted the test
+  order/commission and restored the product's stock.
+
+## Completed (2026-07-29 — Invoices are admin-only)
+
+- Deleted `app/creator/orders/[id]/invoice/` (`page.tsx` +
+  `invoice-actions.tsx`) entirely — admin explicitly asked that only
+  admin can see order invoices, not creators. These files were
+  already committed (`fb8ba8c`), so they're recoverable from git
+  history if ever needed; nothing was lost.
+- Removed the "Invoice" link from
+  `app/creator/earnings/earnings-history.tsx` that pointed at the
+  now-deleted route, and dropped the now-dead `orderId` field from
+  `HistoryItem` (and the two places `app/creator/earnings/page.tsx`
+  set it, including trimming `order.id` out of the commission
+  `select`).
+- `app/admin/orders/[id]/invoice/` is untouched — that's the only
+  invoice view left in the app, admin-only via `requireAdmin()`.

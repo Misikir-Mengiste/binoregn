@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Clock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
@@ -64,11 +65,13 @@ export function CreatorsClient({ creators }: { creators: CreatorRow[] }) {
           {
             label: "Pending approval",
             value: pendingCount.toLocaleString(),
+            icon: Clock,
             accent: "orange",
           },
           {
             label: "Approved",
             value: approvedCount.toLocaleString(),
+            icon: CheckCircle2,
             accent: "mint",
           },
         ]}

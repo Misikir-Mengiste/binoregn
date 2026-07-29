@@ -134,7 +134,7 @@ export function LinksListClient({
         ) : (
           <p className="px-5 py-12 text-center text-sm text-muted-foreground">
             {allLinks.length === 0
-              ? "No approved links yet — apply to a product on the Products page and wait for admin approval."
+              ? "No approved links yet. Apply to a product on the Products page and wait for admin approval."
               : "No links match your search."}
           </p>
         )}

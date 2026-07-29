@@ -4,7 +4,7 @@ import {
   ArrowUpRight,
   Eye,
   Link2,
-  Sparkles,
+  TrendingUp,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -314,11 +314,11 @@ export default async function CreatorOverviewPage() {
         </div>
 
         <div className="relative flex flex-col justify-between gap-5 overflow-hidden rounded-[16px] bg-gradient-to-br from-teal-700 to-teal-500 p-6 text-white shadow-card">
-          <Sparkles className="absolute -top-3 -right-3 h-24 w-24 text-white/10" />
+          <TrendingUp className="absolute -top-3 -right-3 h-24 w-24 text-white/10" />
           <div className="relative">
             <p className="text-base font-bold">Grow your earnings</p>
             <p className="mt-2 text-sm text-white/85">
-              Apply to more products and share your affiliate links — you earn a
+              Apply to more products and share your affiliate links. You earn a
               fixed commission on every completed order.
             </p>
           </div>
@@ -401,7 +401,7 @@ export default async function CreatorOverviewPage() {
             </div>
           ) : (
             <p className="px-5 py-10 text-center text-sm text-muted-foreground">
-              No activity yet — commissions and payouts show up here.
+              No activity yet. Commissions and payouts show up here.
             </p>
           )}
         </div>

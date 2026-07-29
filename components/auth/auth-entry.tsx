@@ -93,7 +93,7 @@ export function AuthEntry({ variant }: { variant: Variant }) {
     try {
       const result = await signIn("otp", { email, code, redirect: false });
       if (result?.error) {
-        throw new Error("Incorrect or expired code — request a new one");
+        throw new Error("Incorrect or expired code. Request a new one");
       }
       router.push("/dashboard");
       router.refresh();
@@ -156,7 +156,7 @@ export function AuthEntry({ variant }: { variant: Variant }) {
       <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-200/30 blur-3xl" />
 
       <Link href="/" className="mb-6 flex items-center">
-        <Logo className="h-9" />
+        <Logo className="h-14" />
       </Link>
 
       <div className="relative w-full max-w-sm rounded-[18px] border border-white/60 bg-card/90 px-6 py-8 shadow-card backdrop-blur">
@@ -280,7 +280,7 @@ export function AuthEntry({ variant }: { variant: Variant }) {
                 <MoveRight className="ml-2 h-4 w-4" />
               </Button>
               <p className="text-xs text-ink-600">
-                We&apos;ll send a 6-digit code — no password needed.
+                We&apos;ll send a 6-digit code. No password needed.
               </p>
               <p className="text-sm text-ink-600">
                 {copy.helper}{" "}

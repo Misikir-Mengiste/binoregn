@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Bell,
   ClipboardCheck,
+  ShoppingBag,
   UserPlus,
   Wallet,
   type LucideIcon,
@@ -16,12 +17,14 @@ const ICON: Record<AdminNotification["type"], LucideIcon> = {
   APPLICATION: ClipboardCheck,
   CREATOR: UserPlus,
   WITHDRAWAL: Wallet,
+  ORDER: ShoppingBag,
 };
 
 const TILE: Record<AdminNotification["type"], string> = {
   APPLICATION: "bg-teal-100 text-teal-700",
   CREATOR: "bg-blue-100 text-blue-700",
   WITHDRAWAL: "bg-peach-100 text-peach-700",
+  ORDER: "bg-mint-100 text-mint-500",
 };
 
 const SEEN_KEY = "admin-notifications-seen";
@@ -120,7 +123,7 @@ export function AdminNotificationsBell({
           <div className="max-h-[360px] overflow-y-auto">
             {notifications.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-                Nothing pending — you&apos;re all caught up.
+                Nothing pending. You&apos;re all caught up.
               </p>
             ) : (
               <ul className="divide-y divide-border">

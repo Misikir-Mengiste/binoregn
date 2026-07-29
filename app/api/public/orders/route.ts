@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { createOrderSchema } from "@/lib/validations/order";
-import { sendOrderTrackingEmail } from "@/lib/mailer";
+import { sendOrderTrackingEmail, sendNewOrderAdminEmail } from "@/lib/mailer";
 
 // Creates an order from the public, no-payment checkout flow
 // (architecture.md app/(public) boundary — no buyer account).
@@ -104,6 +104,28 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error("[orders] failed to send tracking email:", error);
     }
+  }
+
+  // Notify every admin (no separate super-admin role — see Role enum
+  // in schema.prisma) that a new order needs their attention. Same
+  // best-effort rule as the tracking email above.
+  try {
+    const admins = await prisma.user.findMany({
+      where: { role: "ADMIN" },
+      select: { email: true },
+    });
+    await sendNewOrderAdminEmail(
+      admins.map((admin) => admin.email),
+      {
+        id: order.id,
+        buyerName,
+        productName: order.product.name,
+        priceBirr: order.product.priceBirr,
+        quantity,
+      },
+    );
+  } catch (error) {
+    console.error("[orders] failed to send admin notification email:", error);
   }
 
   return apiSuccess(

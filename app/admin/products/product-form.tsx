@@ -429,7 +429,7 @@ export function ProductForm({
                 <span className="text-xs text-ink-400">
                   Unpublished products (and any at 0 stock, automatically)
                   are hidden from the creator product catalog and from
-                  their own public storefront page — existing affiliate
+                  their own public storefront page. Existing affiliate
                   links stay on record but stop resolving.
                 </span>
               </span>
@@ -439,7 +439,7 @@ export function ProductForm({
           <FormCard title="Delivery Options">
             <p className="text-xs text-ink-400">
               Shown in the Delivery Options card on the product page.
-              Pre-filled with defaults — edit per product if needed.
+              Pre-filled with defaults; edit per product if needed.
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">

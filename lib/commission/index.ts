@@ -9,9 +9,9 @@ import { prisma } from "@/lib/prisma";
 // cash-reconciliation update, regardless of whether the order is
 // actually eligible yet. Once the order is Delivered and has no
 // Commission yet, this both decrements the product's stock and
-// creates the Commission (status PENDING, amount snapshotted from
-// the product) — the two are bundled here because they're gated by
-// the exact same one-time "just became Delivered" event.
+// creates the Commission (amount snapshotted from the product) —
+// the two are bundled here because they're gated by the exact same
+// one-time "just became Delivered" event.
 //
 // Delivered is the single trigger (decided 2026-07-28, superseding
 // the earlier Delivered+cash-reconciled two-step trigger). Cash is
@@ -20,6 +20,18 @@ import { prisma } from "@/lib/prisma";
 // it via the separate "Mark cash reconciled" action. That action still
 // exists for admins who want to record reconciliation earlier/independently,
 // it's just no longer a precondition for the commission to be created.
+//
+// Commission is created straight into PAID (decided 2026-07-29,
+// superseding the earlier Delivered→Pending→(admin) Paid flow) —
+// admin explicitly asked for delivery to auto-pay the creator rather
+// than leaving a manual "Mark Paid" step. This is a UI-level
+// simplification, not a real payment gateway: no money actually
+// moves through the app (see architecture.md — COD, no online
+// payments), so this now records the admin's payout as already
+// settled at the moment of delivery. `markCommissionPaid` /
+// PATCH /api/admin/commissions/[id]/pay are kept only to let an
+// admin resolve any pre-existing PENDING rows from before this
+// change; no new commission will ever need them.
 export async function maybeCreateCommission(orderId: string) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -56,7 +68,8 @@ export async function maybeCreateCommission(orderId: string) {
       orderId: order.id,
       creatorId: order.creatorId,
       amountBirr: order.product.commissionBirr,
-      status: "PENDING",
+      status: "PAID",
+      paidAt: new Date(),
     },
   });
 }

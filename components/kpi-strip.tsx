@@ -1,16 +1,18 @@
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ACCENT: Record<string, string> = {
-  teal: "bg-teal-500",
-  orange: "bg-orange-500",
-  mint: "bg-mint-500",
-  coral: "bg-coral-500",
+  teal: "bg-teal-100 text-teal-700",
+  orange: "bg-peach-100 text-peach-700",
+  mint: "bg-mint-100 text-mint-500",
+  coral: "bg-coral-100 text-coral-500",
 };
 
 export type KpiItem = {
   label: string;
   value: string | number;
   caption?: string;
+  icon: LucideIcon;
   accent?: keyof typeof ACCENT;
 };
 
@@ -35,18 +37,20 @@ export function KpiStrip({ items }: { items: KpiItem[] }) {
               index === 2 && "sm:border-l-0 xl:border-l",
             )}
           >
-            <p className="text-[13px] font-medium text-ink-600">{item.label}</p>
-            <div className="flex items-center gap-3">
-              <p className="text-[22px] font-bold tracking-tight text-foreground">
-                {item.value}
-              </p>
-              <div
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[13px] font-medium text-ink-600">{item.label}</p>
+              <span
                 className={cn(
-                  "h-[3px] w-8 shrink-0 rounded-pill",
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px]",
                   ACCENT[item.accent ?? "teal"],
                 )}
-              />
+              >
+                <item.icon className="h-4 w-4" />
+              </span>
             </div>
+            <p className="text-[22px] font-bold tracking-tight text-foreground">
+              {item.value}
+            </p>
             <p className="text-xs text-muted-foreground">
               {item.caption ?? `${item.label} last 365 days`}
             </p>

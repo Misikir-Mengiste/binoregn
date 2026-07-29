@@ -41,7 +41,7 @@ function PayoutInfo({ creator }: { creator: CommissionRow["creator"] }) {
     <div>
       <p className="font-semibold text-foreground">
         {creator.payoutMethod === "BANK_TRANSFER" && creator.payoutBankName
-          ? `${label} — ${creator.payoutBankName}`
+          ? `${label} (${creator.payoutBankName})`
           : label}
       </p>
       <p className="text-xs text-ink-400">

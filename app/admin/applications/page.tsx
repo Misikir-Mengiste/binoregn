@@ -1,3 +1,4 @@
+import { Clock, CheckCircle2, XCircle } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
@@ -33,16 +34,19 @@ export default async function AdminApplicationsPage() {
           {
             label: "Pending",
             value: pending.toLocaleString(),
+            icon: Clock,
             accent: "orange",
           },
           {
             label: "Approved",
             value: approved.toLocaleString(),
+            icon: CheckCircle2,
             accent: "mint",
           },
           {
             label: "Rejected",
             value: rejected.toLocaleString(),
+            icon: XCircle,
             accent: "coral",
           },
         ]}

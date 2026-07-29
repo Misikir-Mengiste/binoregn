@@ -1,5 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  Wallet,
+  Clock,
+  BadgeCheck,
+  PiggyBank,
+  TrendingUp,
+  ShoppingBag,
+  Link2,
+  FileText,
+} from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
@@ -230,24 +240,28 @@ export default async function AdminCreatorDetailPage({
           {
             label: "Total earned",
             value: birr(totalEarned),
+            icon: Wallet,
             accent: "teal",
             caption: "Pending + paid commissions",
           },
           {
             label: "Pending",
             value: birr(pendingBirr),
+            icon: Clock,
             accent: "orange",
             caption: "Commissions awaiting payout",
           },
           {
             label: "Paid",
             value: birr(paidBirr),
+            icon: BadgeCheck,
             accent: "mint",
             caption: "Commissions marked paid",
           },
           {
             label: "Available balance",
             value: birr(availableBalance),
+            icon: PiggyBank,
             accent: "teal",
             caption: "Paid minus withdrawals",
           },
@@ -260,24 +274,28 @@ export default async function AdminCreatorDetailPage({
           {
             label: "Revenue driven",
             value: birr(revenueBirr),
+            icon: TrendingUp,
             accent: "teal",
             caption: "Order value from their links",
           },
           {
             label: "Orders",
             value: orders.length.toLocaleString(),
+            icon: ShoppingBag,
             accent: "orange",
             caption: `${deliveredCount.toLocaleString()} delivered`,
           },
           {
             label: "Active links",
             value: links.length.toLocaleString(),
+            icon: Link2,
             accent: "mint",
             caption: "Approved affiliate links",
           },
           {
             label: "Applications",
             value: applications.length.toLocaleString(),
+            icon: FileText,
             accent: "coral",
             caption: "Products applied to",
           },

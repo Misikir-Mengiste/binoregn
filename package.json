@@ -8,6 +8,7 @@
     "start": "next start -p 4000",
     "lint": "eslint",
     "clear": "tsx prisma/clear.ts",
+    "db:reset": "tsx prisma/reset.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

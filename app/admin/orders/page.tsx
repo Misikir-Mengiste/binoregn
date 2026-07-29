@@ -1,3 +1,4 @@
+import { ShoppingBag, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
@@ -48,21 +49,25 @@ export default async function AdminOrdersPage() {
           {
             label: "Total Orders",
             value: total.toLocaleString(),
+            icon: ShoppingBag,
             accent: "teal",
           },
           {
             label: "New Orders",
             value: placed.toLocaleString(),
+            icon: Clock,
             accent: "orange",
           },
           {
             label: "Completed Orders",
             value: delivered.toLocaleString(),
+            icon: CheckCircle2,
             accent: "mint",
           },
           {
             label: "Cancelled Orders",
             value: cancelled.toLocaleString(),
+            icon: XCircle,
             accent: "coral",
           },
         ]}

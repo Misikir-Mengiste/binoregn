@@ -1,3 +1,4 @@
+import { Clock, BadgeCheck, CheckCircle2, XCircle } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -78,24 +79,28 @@ export default async function AdminOverviewPage() {
             label: "Pending commissions",
             value: `${summary.pendingCommissionBirr} ETB`,
             caption: "Pending commissions last 365 days",
+            icon: Clock,
             accent: "teal",
           },
           {
             label: "Paid this month",
             value: `${summary.paidThisMonthBirr} ETB`,
             caption: "Paid commissions this month",
+            icon: BadgeCheck,
             accent: "orange",
           },
           {
             label: "Completed Order",
             value: deliveredOrders.toLocaleString(),
             caption: "Completed Order last 365 days",
+            icon: CheckCircle2,
             accent: "mint",
           },
           {
             label: "Cancelled Order",
             value: cancelledOrders.toLocaleString(),
             caption: "Cancelled Order last 365 days",
+            icon: XCircle,
             accent: "coral",
           },
         ]}

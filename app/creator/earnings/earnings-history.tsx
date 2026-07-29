@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { ArrowUpRight, BadgeDollarSign, Search } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { cn } from "@/lib/utils";
@@ -15,7 +14,6 @@ export type HistoryItem = {
   at: Date;
   amountBirr: number;
   direction: "in" | "out" | "neutral";
-  orderId: string | null;
 };
 
 const FILTERS = [
@@ -100,14 +98,6 @@ export function EarningsHistory({ items }: { items: HistoryItem[] }) {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
-                  {item.orderId ? (
-                    <Link
-                      href={`/creator/orders/${item.orderId}/invoice`}
-                      className="hidden h-8 items-center rounded-[8px] border border-border bg-card px-3 text-xs font-medium text-ink-600 hover:text-teal-700 sm:inline-flex"
-                    >
-                      Invoice
-                    </Link>
-                  ) : null}
                   <StatusBadge status={item.status} />
                   <span
                     className={cn(
@@ -129,7 +119,7 @@ export function EarningsHistory({ items }: { items: HistoryItem[] }) {
       ) : (
         <p className="px-5 py-12 text-center text-sm text-muted-foreground">
           {items.length === 0
-            ? "No earnings yet — commissions appear here once a referred order is completed and its payment is confirmed."
+            ? "No earnings yet. Commissions appear here once a referred order is completed and its payment is confirmed."
             : "No activity matches your search."}
         </p>
       )}
