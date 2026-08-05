@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Percent, RotateCcw, Truck, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { RichText } from "@/components/rich-text";
+import { ExpandableDescription } from "@/components/expandable-description";
 import { ProductPurchasePanel } from "./product-purchase-panel";
 import { ProductGallery } from "./product-gallery";
 import { CollapsibleCard } from "./collapsible-card";
@@ -159,7 +159,7 @@ export default async function StorefrontPage({
 
             {product.description ? (
               <CollapsibleCard title="Description">
-                <RichText html={product.description} />
+                <ExpandableDescription html={product.description} />
               </CollapsibleCard>
             ) : null}
 

@@ -6,7 +6,7 @@ import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/search-input";
 import { CopyButton } from "@/components/copy-button";
-import { RichText } from "@/components/rich-text";
+import { ExpandableDescription } from "@/components/expandable-description";
 import { cn } from "@/lib/utils";
 
 type CatalogProduct = {
@@ -656,7 +656,7 @@ export function CatalogClient({
                     </span>
                   ) : null}
                   {previewProduct.description && (
-                    <RichText html={previewProduct.description} />
+                    <ExpandableDescription html={previewProduct.description} />
                   )}
                   {previewProduct.applicationStatus === "APPROVED" &&
                   previewProduct.affiliateLinkSlug ? (
