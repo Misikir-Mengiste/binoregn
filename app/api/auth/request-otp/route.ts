@@ -43,14 +43,20 @@ export async function POST(request: NextRequest) {
   const code = generateOtpCode();
   await storeOtpCode(email, code);
 
-  // Email delivery must not block sign-in: the code is already stored, so
-  // a transient/misconfigured SMTP failure shouldn't 500 the request and
-  // trap the user on the email step (in dev the 000000 bypass still
-  // works). Log it for the operator instead.
+  // Email delivery must not block sign-in in dev: the code is already
+  // stored, so a transient/misconfigured SMTP failure shouldn't 500 the
+  // request and trap the user on the email step there — the 000000
+  // bypass still works regardless of whether the email went out. In
+  // production there's no bypass, so silently swallowing a send failure
+  // just strands the user on "check your inbox" with a code that will
+  // never arrive and no explanation — surface it instead.
   try {
     await sendOtpEmail(email, code);
   } catch (error) {
     console.error("[request-otp] failed to send OTP email:", error);
+    if (process.env.NODE_ENV === "production") {
+      return apiError("Could not send the code. Please try again in a moment.", 502);
+    }
   }
 
   // Always return the same response regardless of whether this

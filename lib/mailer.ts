@@ -8,10 +8,21 @@ const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT ?? 587),
   secure: process.env.SMTP_SECURE === "true",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
-  },
+  // Local catchers like Mailpit don't require (or support) auth — passing
+  // an auth object with an empty user still makes nodemailer attempt
+  // AUTH LOGIN and fail. Only authenticate when a user is configured.
+  auth: process.env.SMTP_USER
+    ? {
+        user: process.env.SMTP_USER,
+        // Gmail app passwords are displayed as four space-separated groups
+        // ("abcd efgh ijkl mnop") for readability, but the real credential
+        // is the 16 characters with no spaces — pasting the displayed form
+        // into .env as-is makes SMTP auth fail silently (caught in
+        // request-otp.ts, never surfaced to the user), so strip whitespace
+        // defensively here.
+        pass: process.env.SMTP_PASSWORD?.replace(/\s+/g, ""),
+      }
+    : undefined,
 });
 
 export async function sendOtpEmail(email: string, code: string) {
