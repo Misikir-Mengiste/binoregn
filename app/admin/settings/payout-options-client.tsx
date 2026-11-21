@@ -187,9 +187,12 @@ function OptionSection({
 export function PayoutOptionsClient({
   banks: initialBanks,
   wallets: initialWallets,
+  children,
 }: {
   banks: PayoutOption[];
   wallets: PayoutOption[];
+  // Extra settings cards rendered under the header (e.g. Telegram).
+  children?: React.ReactNode;
 }) {
   const [banks, setBanks] = useState(initialBanks);
   const [wallets, setWallets] = useState(initialWallets);
@@ -201,6 +204,8 @@ export function PayoutOptionsClient({
         description="Manage the bank and wallet options creators can choose from for payouts."
         breadcrumbs={[{ label: "Settings" }]}
       />
+
+      {children}
 
       <OptionSection
         title="Bank accounts"

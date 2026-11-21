@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Plus, X, Package, Link2, Percent, Clock } from "lucide-react";
+import { Plus, X, Package, Link2, Percent, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
@@ -13,6 +13,7 @@ import { RichText } from "@/components/rich-text";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/generated/prisma/client";
 import { ProductForm } from "./product-form";
+import { shortProductName } from "@/lib/short-name";
 
 type ProductRow = Product & {
   _count: { applications: number; affiliateLinks: number };
@@ -166,28 +167,28 @@ export function ProductsClient({
         items={[
           {
             label: "Total Products",
-            value: kpis.totalProducts.toLocaleString(),
+            value: kpis.totalProducts.toLocaleString("en-US"),
             caption: "Products in your catalog",
             icon: Package,
             accent: "teal",
           },
           {
             label: "Active Links",
-            value: kpis.activeLinks.toLocaleString(),
+            value: kpis.activeLinks.toLocaleString("en-US"),
             caption: "Approved affiliate links across all products",
             icon: Link2,
             accent: "mint",
           },
           {
             label: "Avg. Commission",
-            value: `${kpis.avgCommissionBirr.toLocaleString()} ETB`,
+            value: `${kpis.avgCommissionBirr.toLocaleString("en-US")} ETB`,
             caption: "Average commission per product",
             icon: Percent,
             accent: "orange",
           },
           {
             label: "Pending Applications",
-            value: kpis.pendingApplications.toLocaleString(),
+            value: kpis.pendingApplications.toLocaleString("en-US"),
             caption: "Awaiting your review",
             icon: Clock,
             accent: "coral",
@@ -240,16 +241,16 @@ export function ProductsClient({
                 <div className="mt-4 flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-foreground">
-                      {product.name}
+                      <span title={product.name}>{shortProductName(product.name)}</span>
                     </p>
                     {product.category && (
                       <p className="text-xs text-ink-400">{product.category}</p>
                     )}
                     <p className="mt-1 text-lg font-semibold text-foreground">
-                      {product.priceBirr.toLocaleString()} ETB
+                      {product.priceBirr.toLocaleString("en-US")} ETB
                     </p>
                     <p className="text-xs text-ink-400">
-                      Commission {product.commissionBirr.toLocaleString()} ETB
+                      Commission {product.commissionBirr.toLocaleString("en-US")} ETB
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 text-xs text-ink-400">
@@ -283,7 +284,7 @@ export function ProductsClient({
                     )}
                   >
                     {product.stock > 0
-                      ? `${product.stock.toLocaleString()} in stock`
+                      ? `${product.stock.toLocaleString("en-US")} in stock`
                       : "Out of stock"}
                   </span>
                 </div>

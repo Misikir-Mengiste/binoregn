@@ -21,57 +21,68 @@ import { prisma } from "@/lib/prisma";
 // exists for admins who want to record reconciliation earlier/independently,
 // it's just no longer a precondition for the commission to be created.
 //
-// Commission is created straight into PAID (decided 2026-07-29,
-// superseding the earlier Delivered→Pending→(admin) Paid flow) —
-// admin explicitly asked for delivery to auto-pay the creator rather
-// than leaving a manual "Mark Paid" step. This is a UI-level
-// simplification, not a real payment gateway: no money actually
-// moves through the app (see architecture.md — COD, no online
-// payments), so this now records the admin's payout as already
-// settled at the moment of delivery. `markCommissionPaid` /
-// PATCH /api/admin/commissions/[id]/pay are kept only to let an
-// admin resolve any pre-existing PENDING rows from before this
-// change; no new commission will ever need them.
+// Commission is created PENDING (decided 2026-11-11, reversing the
+// 2026-07-29 auto-PAID rule). It becomes PAID only through a Friday
+// payout (./payouts.ts), which covers PENDING commissions created by
+// Thursday 11:59 PM once a creator's total reaches the minimum.
+// Returns the new commission, or null if none was created.
 export async function maybeCreateCommission(orderId: string) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { commission: true, product: true },
   });
-  if (!order) return;
-  if (order.commission) return;
-  if (order.deliveryStatus !== "DELIVERED") return;
+  if (!order) return null;
+  if (order.commission) return null;
+  if (order.deliveryStatus !== "DELIVERED") return null;
 
-  if (!order.cashReconciledAt) {
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { cashReconciledAt: new Date() },
+  try {
+    // One transaction: the commission insert comes first and
+    // Commission.orderId is unique, so if two "Delivered" requests race
+    // (double click, bulk update) the second one fails here and rolls
+    // back — stock is deducted and the commission created exactly once.
+    return await prisma.$transaction(async (tx) => {
+      const commission = await tx.commission.create({
+        data: {
+          orderId: order.id,
+          creatorId: order.creatorId,
+          amountBirr: order.product.commissionBirr,
+          status: "PENDING",
+        },
+      });
+
+      if (!order.cashReconciledAt) {
+        await tx.order.update({
+          where: { id: orderId },
+          data: { cashReconciledAt: new Date() },
+        });
+      }
+
+      // Stock leaves inventory here, at Delivered, not at checkout — a
+      // placed order can still be cancelled/returned before delivery.
+      // Atomic decrement (two orders of the same product delivered at
+      // once both count), then floored at 0 rather than negative — the
+      // "unpublish when out of stock" behavior (app/creator/products, the
+      // public storefront) reads `stock > 0` directly, so this is the
+      // only place stock is ever decremented.
+      const product = await tx.product.update({
+        where: { id: order.productId },
+        data: { stock: { decrement: order.quantity } },
+        select: { stock: true },
+      });
+      if (product.stock < 0) {
+        await tx.product.update({
+          where: { id: order.productId },
+          data: { stock: 0 },
+        });
+      }
+
+      return commission;
     });
+  } catch (error) {
+    // P2002 = unique violation: another request created it first.
+    if ((error as { code?: string }).code === "P2002") return null;
+    throw error;
   }
-
-  // Stock leaves inventory here, at Delivered, not at checkout — a
-  // placed order can still be cancelled/returned before delivery. Runs
-  // exactly once per order: this whole function body only executes on
-  // the first Delivered transition, since the commission created below
-  // is what permanently locks the order from being re-marked Delivered
-  // (see orderHasCommission in the calling routes). Floored at 0 rather
-  // than allowed negative — the "unpublish when out of stock" behavior
-  // (app/creator/products, the public storefront) reads `stock > 0`
-  // directly, not a separate flag, so this is the only place stock is
-  // ever decremented.
-  await prisma.product.update({
-    where: { id: order.productId },
-    data: { stock: Math.max(order.product.stock - order.quantity, 0) },
-  });
-
-  await prisma.commission.create({
-    data: {
-      orderId: order.id,
-      creatorId: order.creatorId,
-      amountBirr: order.product.commissionBirr,
-      status: "PAID",
-      paidAt: new Date(),
-    },
-  });
 }
 
 // Once a Commission exists for an order, its delivery status and
@@ -88,18 +99,3 @@ export async function orderHasCommission(orderId: string) {
   return commission !== null;
 }
 
-export async function markCommissionPaid(commissionId: string) {
-  const commission = await prisma.commission.findUnique({
-    where: { id: commissionId },
-  });
-  if (!commission) {
-    throw new Error("Commission not found");
-  }
-  if (commission.status !== "PENDING") {
-    throw new Error("Commission is not PENDING");
-  }
-  return prisma.commission.update({
-    where: { id: commissionId },
-    data: { status: "PAID", paidAt: new Date() },
-  });
-}

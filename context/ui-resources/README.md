@@ -18,11 +18,11 @@ structure, sidebar, tables, and cards.
 | ---- | ------ | ----------------------- |
 | `/Users/misaeldessalegn/.cursor/projects/Users-misaeldessalegn-affiliate-marketplace/assets/image-6ddad2c3-86c6-4eb8-8963-d05e78b6c880.png` | Larax dashboard overview: sidebar, top bar, KPI cards, charts, table | `app/admin/page.tsx`, `app/creator/page.tsx` |
 | `/Users/misaeldessalegn/.cursor/projects/Users-misaeldessalegn-affiliate-marketplace/assets/image-3873b7b5-2788-43b2-890a-116dcf7abe60.png` | Larax list/table view: search, filters, table actions, pagination | `app/admin/orders/`, list pages |
-| `/Users/misaeldessalegn/.cursor/projects/Users-misaeldessalegn-affiliate-marketplace/assets/image-a840bbef-0896-45e5-b9c8-8ae1f9e9215e.png` | Mobile product detail top (gallery + thumbnails + price) | `app/(public)/p/[creator]/[slug]` |
-| `/Users/misaeldessalegn/.cursor/projects/Users-misaeldessalegn-affiliate-marketplace/assets/image-1b9405f1-9513-4e53-8d24-7e2858946c55.png` | Mobile product detail mid (quantity, buttons, shipping card) | `app/(public)/p/[creator]/[slug]` |
-| `/Users/misaeldessalegn/.cursor/projects/Users-misaeldessalegn-affiliate-marketplace/assets/image-53591852-45f8-4629-ae5e-259cdc6193fd.png` | Mobile recommendations grid | `app/(public)/p/[creator]/[slug]` |
-| `/Users/misaeldessalegn/.cursor/projects/Users-misaeldessalegn-affiliate-marketplace/assets/image-adab00d6-41b9-4128-858b-210a68c224d1.png` | Desktop product detail layout | `app/(public)/p/[creator]/[slug]` |
-| `/Users/misaeldessalegn/.cursor/projects/Users-misaeldessalegn-affiliate-marketplace/assets/image-f47876f9-56c5-4dc7-9aed-2b1cc32d917e.png` | Desktop recommendations grid | `app/(public)/p/[creator]/[slug]` |
+| `/Users/misaeldessalegn/.cursor/projects/Users-misaeldessalegn-affiliate-marketplace/assets/image-a840bbef-0896-45e5-b9c8-8ae1f9e9215e.png` | Mobile product detail top (gallery + thumbnails + price) | `app/(public)/r/[slug]` |
+| `/Users/misaeldessalegn/.cursor/projects/Users-misaeldessalegn-affiliate-marketplace/assets/image-1b9405f1-9513-4e53-8d24-7e2858946c55.png` | Mobile product detail mid (quantity, buttons, shipping card) | `app/(public)/r/[slug]` |
+| `/Users/misaeldessalegn/.cursor/projects/Users-misaeldessalegn-affiliate-marketplace/assets/image-53591852-45f8-4629-ae5e-259cdc6193fd.png` | Mobile recommendations grid | `app/(public)/r/[slug]` |
+| `/Users/misaeldessalegn/.cursor/projects/Users-misaeldessalegn-affiliate-marketplace/assets/image-adab00d6-41b9-4128-858b-210a68c224d1.png` | Desktop product detail layout | `app/(public)/r/[slug]` |
+| `/Users/misaeldessalegn/.cursor/projects/Users-misaeldessalegn-affiliate-marketplace/assets/image-f47876f9-56c5-4dc7-9aed-2b1cc32d917e.png` | Desktop recommendations grid | `app/(public)/r/[slug]` |
 
 ## Design direction (from these screens)
 

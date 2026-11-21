@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import type { NotificationType } from "@/generated/prisma/client";
 
 export type CreatorNotificationType =
   | "APPLICATION"
   | "COMMISSION"
-  | "WITHDRAWAL";
+  | "PROFILE"
+  | "ANNOUNCEMENT";
 
 export type CreatorNotification = {
   id: string;
@@ -12,106 +14,56 @@ export type CreatorNotification = {
   detail: string;
   at: Date;
   positive: boolean;
+  unread: boolean;
+  href: string | null;
+};
+
+const KIND: Record<
+  NotificationType,
+  { type: CreatorNotificationType; positive: boolean }
+> = {
+  PROFILE_APPROVED: { type: "PROFILE", positive: true },
+  PROFILE_REJECTED: { type: "PROFILE", positive: false },
+  REQUEST_APPROVED: { type: "APPLICATION", positive: true },
+  REQUEST_REJECTED: { type: "APPLICATION", positive: false },
+  ORDER_DELIVERED: { type: "COMMISSION", positive: true },
+  COMMISSION_PAID: { type: "COMMISSION", positive: true },
+  ANNOUNCEMENT: { type: "ANNOUNCEMENT", positive: true },
+  PRODUCT_PAUSED: { type: "APPLICATION", positive: false },
+  PRODUCT_RESUMED: { type: "APPLICATION", positive: true },
 };
 
 /**
- * Recent activity for a creator, derived entirely from their real
- * data (application decisions, commission lifecycle, withdrawal
- * decisions) — there is no separate notifications table in the MVP,
- * so this is a read-only feed, not a read/unread inbox.
+ * The creator's saved notifications (lib/notifications.ts writes them,
+ * dashboard only — no Telegram), newest first. Read state is
+ * stored per row — opening the bell marks them read
+ * (POST /api/creator/notifications/read).
  */
 export async function getCreatorNotifications(
   creatorId: string,
 ): Promise<CreatorNotification[]> {
-  const [applications, commissions, withdrawals] = await Promise.all([
-    prisma.application.findMany({
-      where: {
-        creatorId,
-        status: { in: ["APPROVED", "REJECTED"] },
-        decidedAt: { not: null },
-      },
-      orderBy: { decidedAt: "desc" },
-      take: 8,
-      select: {
-        id: true,
-        status: true,
-        decidedAt: true,
-        product: { select: { name: true } },
-      },
-    }),
-    prisma.commission.findMany({
-      where: { creatorId },
-      orderBy: { createdAt: "desc" },
-      take: 8,
-      select: {
-        id: true,
-        amountBirr: true,
-        status: true,
-        createdAt: true,
-        paidAt: true,
-        order: { select: { product: { select: { name: true } } } },
-      },
-    }),
-    prisma.withdrawal.findMany({
-      where: {
-        creatorId,
-        status: { in: ["APPROVED", "REJECTED"] },
-        decidedAt: { not: null },
-      },
-      orderBy: { decidedAt: "desc" },
-      take: 8,
-      select: { id: true, amountBirr: true, status: true, decidedAt: true },
-    }),
-  ]);
+  const rows = await prisma.notification.findMany({
+    where: { creatorId },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      body: true,
+      href: true,
+      readAt: true,
+      createdAt: true,
+    },
+  });
 
-  const events: CreatorNotification[] = [];
-
-  for (const application of applications) {
-    const approved = application.status === "APPROVED";
-    events.push({
-      id: `app-${application.id}`,
-      type: "APPLICATION",
-      title: approved ? "Application approved" : "Application rejected",
-      detail: application.product.name,
-      at: application.decidedAt!,
-      positive: approved,
-    });
-  }
-
-  for (const commission of commissions) {
-    if (commission.status === "PAID" && commission.paidAt) {
-      events.push({
-        id: `commission-paid-${commission.id}`,
-        type: "COMMISSION",
-        title: `${commission.amountBirr.toLocaleString()} ETB paid`,
-        detail: commission.order.product.name,
-        at: commission.paidAt,
-        positive: true,
-      });
-    } else {
-      events.push({
-        id: `commission-pending-${commission.id}`,
-        type: "COMMISSION",
-        title: `${commission.amountBirr.toLocaleString()} ETB commission earned`,
-        detail: `${commission.order.product.name} · pending payout`,
-        at: commission.createdAt,
-        positive: true,
-      });
-    }
-  }
-
-  for (const withdrawal of withdrawals) {
-    const approved = withdrawal.status === "APPROVED";
-    events.push({
-      id: `withdrawal-${withdrawal.id}`,
-      type: "WITHDRAWAL",
-      title: approved ? "Withdrawal approved" : "Withdrawal rejected",
-      detail: `${withdrawal.amountBirr.toLocaleString()} ETB`,
-      at: withdrawal.decidedAt!,
-      positive: approved,
-    });
-  }
-
-  events.sort((a, b) => b.at.getTime() - a.at.getTime());
-  return events.slice(0, 10);
+  return rows.map((row) => ({
+    id: row.id,
+    ...KIND[row.type],
+    title: row.title,
+    detail: row.body,
+    at: row.createdAt,
+    unread: row.readAt === null,
+    href: row.href,
+  }));
 }

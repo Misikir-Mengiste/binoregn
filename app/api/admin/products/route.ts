@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { createProductSchema } from "@/lib/validations/product";
+import { discountSettingsProblem } from "@/lib/discount";
 
 export async function GET() {
   const authed = await requireAdmin();
@@ -30,6 +31,14 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return apiError(parsed.error.issues[0]?.message ?? "Invalid input", 400);
   }
+
+  const discountProblem = discountSettingsProblem({
+    priceBirr: parsed.data.priceBirr,
+    discountEnabled: parsed.data.discountEnabled ?? false,
+    discountBirr: parsed.data.discountBirr ?? null,
+    discountCode: parsed.data.discountCode ?? null,
+  });
+  if (discountProblem) return apiError(discountProblem, 400);
 
   const product = await prisma.product.create({ data: parsed.data });
 

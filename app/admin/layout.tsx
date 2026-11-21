@@ -14,14 +14,9 @@ export default async function AdminLayout({
     redirect("/sign-in");
   }
 
+  // Pages also check (requireAdminPage) — see lib/auth-helpers.ts.
   if (session.user.role !== "ADMIN") {
-    return (
-      <main className="flex min-h-screen flex-1 items-center justify-center px-6">
-        <p className="text-ink-600">
-          You don&apos;t have access to this page.
-        </p>
-      </main>
-    );
+    redirect("/dashboard");
   }
 
   const notifications = await getAdminNotifications();

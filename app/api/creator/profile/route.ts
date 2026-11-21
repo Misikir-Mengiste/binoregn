@@ -2,8 +2,16 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireCreator } from "@/lib/auth-helpers";
-import { creatorOnboardingSchema } from "@/lib/validations/creator-onboarding";
+import { creatorProfileSchema } from "@/lib/validations/creator-onboarding";
 import { PayoutMethod } from "@/generated/prisma/client";
+import { alertIfPayoutChanged } from "@/lib/payout-change-alert";
+
+const PAYOUT_SELECT = {
+  payoutMethod: true,
+  payoutAccountName: true,
+  payoutAccountNumber: true,
+  payoutBankName: true,
+} as const;
 
 export async function PATCH(request: NextRequest) {
   const authed = await requireCreator();
@@ -16,14 +24,15 @@ export async function PATCH(request: NextRequest) {
     return apiError("Invalid JSON body", 400);
   }
 
-  const parsed = creatorOnboardingSchema.safeParse(body);
+  // Username isn't editable in Settings — any username in the body is
+  // ignored (stripped by the schema), and the stored one is kept as is.
+  const parsed = creatorProfileSchema.safeParse(body);
   if (!parsed.success) {
     return apiError(parsed.error.issues[0]?.message ?? "Invalid input", 400);
   }
 
   const {
     fullName,
-    username,
     phone,
     displayName,
     platform,
@@ -35,14 +44,6 @@ export async function PATCH(request: NextRequest) {
     bankAccountName,
     bankAccountNumber,
   } = parsed.data;
-
-  const existingUsername = await prisma.user.findUnique({
-    where: { creatorUsername: username },
-    select: { id: true },
-  });
-  if (existingUsername && existingUsername.id !== authed.id) {
-    return apiError("That username is already taken", 409);
-  }
 
   const payoutFields =
     payoutMethod === "TELEBIRR"
@@ -59,11 +60,15 @@ export async function PATCH(request: NextRequest) {
           payoutBankName: bankName ?? null,
         };
 
+  const before = await prisma.user.findUnique({
+    where: { id: authed.id },
+    select: PAYOUT_SELECT,
+  });
+
   const user = await prisma.user.update({
     where: { id: authed.id },
     data: {
       name: fullName,
-      creatorUsername: username,
       creatorPhone: phone,
       creatorDisplayName: displayName,
       creatorPlatform: platform,
@@ -71,8 +76,10 @@ export async function PATCH(request: NextRequest) {
       creatorCategory: category,
       ...payoutFields,
     },
-    select: { id: true },
+    select: { id: true, ...PAYOUT_SELECT },
   });
 
-  return apiSuccess(user);
+  alertIfPayoutChanged(authed.id, before, user);
+
+  return apiSuccess({ id: user.id });
 }

@@ -7,9 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/rich-text-editor";
 import type { Product } from "@/generated/prisma/client";
+import {
+  DEFAULT_TRUST_BADGES,
+  TRUST_BADGE_COUNT,
+  TRUST_BADGE_MAX_LENGTH,
+} from "@/lib/product-badges";
+import { cn } from "@/lib/utils";
 
 type ProductWithExtras = Product & {
   compareAtBirr?: number | null;
+  discountEnabled?: boolean;
+  discountBirr?: number | null;
+  discountCode?: string | null;
   rating?: number | null;
   ratingCount?: number | null;
   soldCount?: number | null;
@@ -36,6 +45,9 @@ type ProductFormValues = {
   sizes: string;
   priceBirr: string;
   compareAtBirr: string;
+  discountEnabled: boolean;
+  discountBirr: string;
+  discountCode: string;
   rating: string;
   ratingCount: string;
   soldCount: string;
@@ -51,11 +63,13 @@ type ProductFormValues = {
   imageUrls: string[];
   stock: string;
   isPublished: boolean;
+  maxCreators: string;
+  trustBadges: string[];
 };
 
-// Delivery Options values pre-filled when CREATING a product (admin can
-// edit per product). They feed the storefront's Delivery Options card so
-// new products ship with sensible, editable defaults instead of blanks.
+// Legacy delivery values pre-filled when CREATING a product. The product
+// page no longer shows a Delivery Options card (2026-11-11 — replaced by
+// the trust badges), but the fields are still stored.
 const DELIVERY_DEFAULTS = {
   discountLabel: "Disc 15%",
   deliveryTime: "3-4 Working Days",
@@ -78,6 +92,9 @@ function toFormValues(product?: ProductWithExtras): ProductFormValues {
     sizes: product?.sizes?.join(", ") ?? "",
     priceBirr: product ? String(product.priceBirr) : "",
     compareAtBirr: product?.compareAtBirr ? String(product.compareAtBirr) : "",
+    discountEnabled: Boolean(product?.discountEnabled),
+    discountBirr: product?.discountBirr ? String(product.discountBirr) : "",
+    discountCode: product?.discountCode ?? "",
     rating: product?.rating ? String(product.rating) : "",
     ratingCount: product?.ratingCount ? String(product.ratingCount) : "",
     soldCount: product?.soldCount ? String(product.soldCount) : "",
@@ -99,6 +116,12 @@ function toFormValues(product?: ProductWithExtras): ProductFormValues {
     imageUrls: product?.imageUrls ?? [],
     stock: product ? String(product.stock) : "100",
     isPublished: product ? product.isPublished : true,
+    maxCreators: product?.maxCreators ? String(product.maxCreators) : "",
+    // Always four boxes; new products start with the defaults.
+    trustBadges: Array.from(
+      { length: TRUST_BADGE_COUNT },
+      (_, i) => (product ? product.trustBadges?.[i] ?? "" : DEFAULT_TRUST_BADGES[i]),
+    ),
   };
 }
 
@@ -217,6 +240,10 @@ export function ProductForm({
         compareAtBirr: values.compareAtBirr
           ? Number(values.compareAtBirr)
           : undefined,
+        // null (not undefined) so clearing a field saves as cleared.
+        discountEnabled: values.discountEnabled,
+        discountBirr: values.discountBirr ? Number(values.discountBirr) : null,
+        discountCode: values.discountCode.trim() || null,
         rating: values.rating ? Number(values.rating) : undefined,
         ratingCount: values.ratingCount ? Number(values.ratingCount) : undefined,
         soldCount: values.soldCount ? Number(values.soldCount) : undefined,
@@ -236,6 +263,9 @@ export function ProductForm({
         imageUrls: values.imageUrls,
         stock: Number(values.stock),
         isPublished: values.isPublished,
+        // Blank = unlimited; null (not undefined) so editing can clear it.
+        maxCreators: values.maxCreators ? Number(values.maxCreators) : null,
+        trustBadges: values.trustBadges.map((badge) => badge.trim()),
       };
       const response = await fetch(
         product ? `/api/admin/products/${product.id}` : "/api/admin/products",
@@ -409,6 +439,114 @@ export function ProductForm({
                   }
                 />
               </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="maxCreators" className="text-ink-600">
+                  Creator limit
+                </Label>
+                <Input
+                  id="maxCreators"
+                  type="number"
+                  min={1}
+                  placeholder="Unlimited"
+                  className="h-10 rounded-[8px]"
+                  value={values.maxCreators}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, maxCreators: e.target.value }))
+                  }
+                />
+                <span className="text-xs text-ink-400">
+                  Max creators who can promote this product. Leave blank for
+                  no limit.
+                </span>
+              </div>
+            </div>
+          </FormCard>
+
+          <FormCard title="Creator Discount Code">
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-xs text-ink-400">
+                A fixed amount off the order when the buyer types this code
+                at checkout. The code is never shown on the product page —
+                creators see it on their product page and share it with
+                their followers. Creators still earn the full commission.
+              </p>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={values.discountEnabled}
+                aria-label="Discount on"
+                onClick={() =>
+                  setValues((v) => ({ ...v, discountEnabled: !v.discountEnabled }))
+                }
+                className={cn(
+                  "relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors",
+                  values.discountEnabled ? "bg-teal-600" : "bg-ink-400/40",
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+                    values.discountEnabled && "translate-x-5",
+                  )}
+                />
+              </button>
+            </div>
+            <p
+              className={cn(
+                "w-fit rounded-pill px-2.5 py-1 text-xs font-semibold",
+                values.discountEnabled
+                  ? "bg-mint-100 text-mint-500"
+                  : "bg-surface-100 text-ink-400",
+              )}
+            >
+              {values.discountEnabled
+                ? "On — buyers can use the code"
+                : "Off — the code doesn't work and nothing shows"}
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="discountBirr" className="text-ink-600">
+                  Discount (ETB off)
+                </Label>
+                <Input
+                  id="discountBirr"
+                  type="number"
+                  min={1}
+                  placeholder="e.g. 500"
+                  className="h-10 rounded-[8px]"
+                  value={values.discountBirr}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, discountBirr: e.target.value }))
+                  }
+                />
+                <span className="text-xs text-ink-400">
+                  Taken once per order. Must be less than the price.
+                </span>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="discountCode" className="text-ink-600">
+                  Discount code
+                </Label>
+                <Input
+                  id="discountCode"
+                  placeholder="e.g. BINO500"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  maxLength={20}
+                  className="h-10 rounded-[8px] uppercase"
+                  value={values.discountCode}
+                  onChange={(e) =>
+                    setValues((v) => ({
+                      ...v,
+                      discountCode: e.target.value.toUpperCase().replace(/\s+/g, ""),
+                    }))
+                  }
+                />
+                <span className="text-xs text-ink-400">
+                  3–20 letters or numbers. Not case-sensitive for buyers.
+                </span>
+              </div>
             </div>
           </FormCard>
 
@@ -436,60 +574,35 @@ export function ProductForm({
             </label>
           </FormCard>
 
-          <FormCard title="Delivery Options">
+          <FormCard title="Badges under Buy Now">
             <p className="text-xs text-ink-400">
-              Shown in the Delivery Options card on the product page.
-              Pre-filled with defaults; edit per product if needed.
+              The four highlights shown under the Buy Now button on the
+              product page. Pre-filled with defaults; edit per product, or
+              clear one to hide it.
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-ink-600">Discount</Label>
-                <Input
-                  className="h-10 rounded-[8px]"
-                  placeholder="Disc 15%"
-                  value={values.shippingDiscountLabel}
-                  onChange={(e) =>
-                    setValues((v) => ({
-                      ...v,
-                      shippingDiscountLabel: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-ink-600">Payment</Label>
-                <Input
-                  className="h-10 rounded-[8px] bg-surface-100 text-ink-400"
-                  value="Cash on Delivery "
-                  readOnly
-                  disabled
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-ink-600">Delivery time</Label>
-                <Input
-                  className="h-10 rounded-[8px]"
-                  placeholder="3-4 Working Days"
-                  value={values.shippingDeliveryTime}
-                  onChange={(e) =>
-                    setValues((v) => ({
-                      ...v,
-                      shippingDeliveryTime: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-ink-600">Return &amp; Warranty</Label>
-                <Input
-                  className="h-10 rounded-[8px]"
-                  placeholder="7 Days easy return"
-                  value={values.returns}
-                  onChange={(e) =>
-                    setValues((v) => ({ ...v, returns: e.target.value }))
-                  }
-                />
-              </div>
+              {values.trustBadges.map((badge, index) => (
+                <div key={index} className="flex flex-col gap-1.5">
+                  <Label htmlFor={`trustBadge-${index}`} className="text-ink-600">
+                    Badge {index + 1}
+                  </Label>
+                  <Input
+                    id={`trustBadge-${index}`}
+                    className="h-10 rounded-[8px]"
+                    maxLength={TRUST_BADGE_MAX_LENGTH}
+                    placeholder={DEFAULT_TRUST_BADGES[index]}
+                    value={badge}
+                    onChange={(e) =>
+                      setValues((v) => ({
+                        ...v,
+                        trustBadges: v.trustBadges.map((old, i) =>
+                          i === index ? e.target.value : old,
+                        ),
+                      }))
+                    }
+                  />
+                </div>
+              ))}
             </div>
           </FormCard>
 

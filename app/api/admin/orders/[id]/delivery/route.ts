@@ -4,6 +4,7 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { updateDeliveryStatusSchema } from "@/lib/validations/order-status";
 import { maybeCreateCommission, orderHasCommission } from "@/lib/commission";
+import { afterOrderDelivered } from "@/lib/order-events";
 
 export async function PATCH(
   request: NextRequest,
@@ -43,7 +44,7 @@ export async function PATCH(
     data: { deliveryStatus: parsed.data.status },
   });
 
-  await maybeCreateCommission(id);
+  if (await maybeCreateCommission(id)) await afterOrderDelivered(id);
 
   return apiSuccess(updated);
 }

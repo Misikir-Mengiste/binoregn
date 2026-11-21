@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { maybeCreateCommission, orderHasCommission } from "@/lib/commission";
+import { afterOrderDelivered } from "@/lib/order-events";
 
 // Optional, independent action for an admin who wants to record cash
 // reconciliation ahead of / separately from delivery. It's no longer a
@@ -36,7 +37,7 @@ export async function PATCH(
     data: { cashReconciledAt: new Date() },
   });
 
-  await maybeCreateCommission(id);
+  if (await maybeCreateCommission(id)) await afterOrderDelivered(id);
 
   return apiSuccess(updated);
 }

@@ -9,7 +9,8 @@ async function main() {
   // FK-safe delete order: children first, parents last.
   await prisma.$transaction([
     prisma.commission.deleteMany(),
-    prisma.withdrawal.deleteMany(),
+    // Payouts reference commissions (payoutId), so commissions go first.
+    prisma.payout.deleteMany(),
     prisma.order.deleteMany(),
     prisma.affiliateLink.deleteMany(),
     prisma.application.deleteMany(),

@@ -36,12 +36,13 @@ Affiliate Marketplace is a single-seller platform where one admin lists physical
 
 - Passwordless sign-in (Google OAuth or 6-digit email OTP)
 - Browse product catalog
-- Apply to promote a product; see application status (Pending / Approved / Rejected)
+- Product page in the same design buyers see, plus a commission badge ("You earn X Birr per delivered sale") and one button: Request to Promote → Waiting for Approval → Copy Link + Share (or Not Approved / Full)
+- Request a product again 7 days after a rejection
+- See how many creator spots are left on a product (admin sets a per-product limit; only approved creators use a spot)
 - View and copy affiliate links only for approved products
 - View own earnings: pending and paid commission totals (never other creators’ data)
-- Commission amount shown on a product only after approval for that product
 - Complete creator onboarding: name, username, platform presence, and payout details
-- Request withdrawals from earnings with admin approval
+- See the next Friday payout (amount and date); payouts cover commissions pending by Thursday 11:59 PM, minimum 500 Birr, smaller amounts roll over
 - View printable invoices for own referred orders (non-tax receipt)
 
 ### Admin
@@ -54,7 +55,7 @@ Affiliate Marketplace is a single-seller platform where one admin lists physical
 - Mark an order's COD cash as reconciled/collected — a separate manual action from marking it Delivered
 - Mark commissions Paid after offline payout
 - Generate printable order invoices for buyers (non-tax receipt)
-- Approve or reject creator withdrawal requests
+- Friday payouts: see who is due, download the payout list as Excel, mark creators paid
 - Dashboard signals for pending commissions, paid totals, and new applications
 
 ### Commission and attribution rules

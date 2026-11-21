@@ -3,14 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { LinksListClient } from "./links-list-client";
 
-// Link path is /p/[creator]/[slug] — built at
-// app/(public)/p/[creator]/[slug]/page.tsx.
+// Link path is /r/[slug] (lib/affiliate-link-path.ts) — built at
+// app/(public)/r/[slug]/page.tsx.
 export default async function CreatorLinksPage() {
   const session = await auth();
   const creatorId = session!.user.id;
 
-  const [links, creator] = await Promise.all([
-    prisma.affiliateLink.findMany({
+  const links = await prisma.affiliateLink.findMany({
       where: { creatorId },
       orderBy: { createdAt: "desc" },
       select: {
@@ -30,12 +29,7 @@ export default async function CreatorLinksPage() {
           select: { orders: { where: { deliveryStatus: "DELIVERED" } } },
         },
       },
-    }),
-    prisma.user.findUnique({
-      where: { id: creatorId },
-      select: { creatorUsername: true, email: true },
-    }),
-  ]);
+    });
 
   const linksWithStats = links.map((link) => ({
     slug: link.slug,
@@ -50,11 +44,6 @@ export default async function CreatorLinksPage() {
     orders: linksWithStats.reduce((sum, link) => sum + link.orderCount, 0),
   };
 
-  const creatorSlug =
-    creator?.creatorUsername?.trim() ||
-    creator?.email?.split("@")[0] ||
-    "creator";
-
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -64,7 +53,6 @@ export default async function CreatorLinksPage() {
 
       <LinksListClient
         links={linksWithStats}
-        creatorSlug={creatorSlug}
         totals={totals}
       />
     </div>

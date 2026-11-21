@@ -23,7 +23,7 @@ export function PageHeader({
       ) : null}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-[28px] leading-tight font-bold text-foreground">
+          <h1 className="text-[22px] leading-tight font-bold text-foreground sm:text-[28px]">
             {title}
           </h1>
           {description ? (

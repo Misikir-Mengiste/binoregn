@@ -156,7 +156,7 @@ export function AuthEntry({ variant }: { variant: Variant }) {
       <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-200/30 blur-3xl" />
 
       <Link href="/" className="mb-6 flex items-center">
-        <Logo className="h-14" />
+        <Logo className="h-8" />
       </Link>
 
       <div className="relative w-full max-w-sm rounded-[18px] border border-white/60 bg-card/90 px-6 py-8 shadow-card backdrop-blur">

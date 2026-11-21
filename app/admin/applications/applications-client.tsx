@@ -9,6 +9,8 @@ import { TableToolbar } from "@/components/table-toolbar";
 import { Pagination } from "@/components/pagination";
 import { InitialsAvatar } from "@/components/initials-avatar";
 import { DeleteButton } from "@/components/delete-button";
+import { shortProductName } from "@/lib/short-name";
+import { formatDate } from "@/lib/format";
 
 type ApplicationRow = {
   id: string;
@@ -136,7 +138,7 @@ export function ApplicationsClient({
                       <div className="h-10 w-10 rounded-[8px] bg-teal-100" />
                     )}
                     <p className="font-semibold text-foreground">
-                      {application.product.name}
+                      <span title={application.product.name}>{shortProductName(application.product.name)}</span>
                     </p>
                   </div>
                 </td>
@@ -160,7 +162,7 @@ export function ApplicationsClient({
                   </Link>
                 </td>
                 <td className="px-5 py-3.5 text-ink-600">
-                  {new Date(application.createdAt).toLocaleDateString()}
+                  {formatDate(application.createdAt)}
                 </td>
                 <td className="px-5 py-3.5">
                   <StatusBadge status={application.status} />

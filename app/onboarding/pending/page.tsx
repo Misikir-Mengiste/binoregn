@@ -5,6 +5,7 @@ import { PendingApprovalCard } from "@/components/pending-approval-card";
 
 export default async function OnboardingPendingPage() {
   const session = await auth();
+  let rejected = false;
 
   // Reachable two ways: (1) a signed-in creator mid-flow, checked against
   // their real record below, or (2) an unauthenticated visitor who just
@@ -27,11 +28,20 @@ export default async function OnboardingPendingPage() {
     if (creator.creatorProfileStatus === "APPROVED") {
       redirect("/creator");
     }
+    rejected = creator.creatorProfileStatus === "REJECTED";
   }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-10">
-      <PendingApprovalCard showDashboardLink={false} />
+      {rejected ? (
+        <PendingApprovalCard
+          rejected
+          title="Profile not approved"
+          description="Your creator profile wasn't approved this time. Contact us if you think this is a mistake or want to update your details."
+        />
+      ) : (
+        <PendingApprovalCard showDashboardLink={false} />
+      )}
     </main>
   );
 }

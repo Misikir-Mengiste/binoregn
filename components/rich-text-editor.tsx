@@ -19,16 +19,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { richTextClass } from "@/components/rich-text";
+import { EDITOR_COLORS, sanitizeHtml } from "@/lib/sanitize-html";
 
-const COLORS = [
-  "#1e1b2e",
-  "#4bbcd4",
-  "#1e3a5f",
-  "#dc2626",
-  "#16a34a",
-  "#7c3aed",
-  "#6b7280",
-];
+// Same list the sanitizer keeps — any other text colour is stripped.
+const COLORS = EDITOR_COLORS;
 
 export function RichTextEditor({
   value,
@@ -56,7 +50,20 @@ export function RichTextEditor({
 
   function exec(command: string, arg?: string) {
     editorRef.current?.focus();
+    // Colours as inline styles (<span style="color">), not legacy
+    // <font color> tags, which the sanitizer drops.
+    document.execCommand("styleWithCSS", false, command === "foreColor" ? "true" : "false");
     document.execCommand(command, false, arg);
+    sync();
+  }
+
+  // Pasting from another website brings its styling along; clean it on
+  // the way in so the admin sees exactly what the product page will show.
+  function handlePaste(event: React.ClipboardEvent<HTMLDivElement>) {
+    const html = event.clipboardData.getData("text/html");
+    if (!html) return; // plain text pastes are already clean
+    event.preventDefault();
+    document.execCommand("insertHTML", false, sanitizeHtml(html));
     sync();
   }
 
@@ -174,6 +181,7 @@ export function RichTextEditor({
         contentEditable
         suppressContentEditableWarning
         onInput={sync}
+        onPaste={handlePaste}
         role="textbox"
         aria-multiline="true"
         aria-label="Product description"

@@ -27,7 +27,7 @@ export function CreatorsClient({ creators }: { creators: CreatorRow[] }) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const pendingCount = useMemo(
-    () => creators.filter((creator) => creator.creatorProfileStatus !== "APPROVED").length,
+    () => creators.filter((creator) => creator.creatorProfileStatus === "PENDING").length,
     [creators],
   );
   const approvedCount = useMemo(
@@ -64,13 +64,13 @@ export function CreatorsClient({ creators }: { creators: CreatorRow[] }) {
         items={[
           {
             label: "Pending approval",
-            value: pendingCount.toLocaleString(),
+            value: pendingCount.toLocaleString("en-US"),
             icon: Clock,
             accent: "orange",
           },
           {
             label: "Approved",
-            value: approvedCount.toLocaleString(),
+            value: approvedCount.toLocaleString("en-US"),
             icon: CheckCircle2,
             accent: "mint",
           },
@@ -118,6 +118,11 @@ export function CreatorsClient({ creators }: { creators: CreatorRow[] }) {
                       <span className="inline-flex items-center gap-1.5 rounded-pill bg-mint-100 px-2.5 py-1 text-xs font-medium text-mint-500">
                         <span className="h-1.5 w-1.5 rounded-pill bg-mint-500" />
                         Approved
+                      </span>
+                    ) : creator.creatorProfileStatus === "REJECTED" ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-pill bg-coral-100 px-2.5 py-1 text-xs font-medium text-coral-500">
+                        <span className="h-1.5 w-1.5 rounded-pill bg-coral-500" />
+                        Rejected
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 rounded-pill bg-peach-100 px-2.5 py-1 text-xs font-medium text-peach-700">

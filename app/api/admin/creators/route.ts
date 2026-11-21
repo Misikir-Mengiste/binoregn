@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { apiError, apiSuccess } from "@/lib/api-response";
+import { apiSuccess } from "@/lib/api-response";
 import { requireAdmin } from "@/lib/auth-helpers";
 
 export async function GET() {

@@ -6,26 +6,27 @@ import {
   Link2,
   TrendingUp,
   Wallet,
-  type LucideIcon,
 } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { StatusBadge } from "@/components/status-badge";
+import { CreatorStatCard } from "@/components/creator-stat-card";
+import { formatDate } from "@/lib/format";
 
 // Brand palette (globals.css) for the earnings-breakdown donut.
 const DONUT_PALETTE = [
-  "#00a389", // teal-600
-  "#2f6fed", // blue-700
-  "#f14c4c", // coral-500
-  "#f5a524", // orange-500
-  "#3bb273", // mint-500
-  "#7c3aed", // violet-600
-  "#b8620a", // peach-700
+  "#0cb587", // brand green
+  "#1c6fa8", // blue-700
+  "#b5200c", // brand red
+  "#a2a50a", // brand olive
+  "#7fd9a8", // light green
+  "#070707", // brand black
+  "#6c6e06", // dark olive
 ];
-const DONUT_OTHER = "#9a97ac"; // ink-400
+const DONUT_OTHER = "#8a928e"; // ink-400
 
 function birr(amount: number) {
-  return `${amount.toLocaleString()} ETB`;
+  return `${amount.toLocaleString("en-US")} ETB`;
 }
 
 // Kept out of the component body so the render stays pure (no Date.now()).
@@ -37,34 +38,6 @@ function earnedInLastDays(
   return commissions
     .filter((c) => c.createdAt.getTime() >= cutoff)
     .reduce((sum, c) => sum + c.amountBirr, 0);
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  tint,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  tint: string;
-}) {
-  return (
-    <div className="flex flex-col gap-3 rounded-[14px] border border-border bg-card p-4 shadow-card">
-      <span
-        className={`flex h-9 w-9 items-center justify-center rounded-[10px] ${tint}`}
-      >
-        <Icon className="h-[18px] w-[18px]" />
-      </span>
-      <div>
-        <p className="text-xs text-ink-400">{label}</p>
-        <p className="text-[19px] font-bold tracking-tight text-foreground">
-          {value}
-        </p>
-      </div>
-    </div>
-  );
 }
 
 type Segment = { label: string; value: number; color: string };
@@ -120,7 +93,7 @@ function DonutChart({
       <div className="absolute flex flex-col items-center">
         <span className="text-[11px] text-ink-400">Total earned</span>
         <span className="text-xl font-bold text-foreground">
-          {total.toLocaleString()}
+          {total.toLocaleString("en-US")}
         </span>
         <span className="text-[11px] text-ink-400">ETB</span>
       </div>
@@ -134,7 +107,7 @@ export default async function CreatorOverviewPage() {
   const email = session?.user?.email ?? "";
   const fallbackName = email.split("@")[0] || "there";
 
-  const [user, commissions, withdrawals, links, ordersCount] =
+  const [user, commissions, payouts, links, ordersCount] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id: creatorId },
@@ -157,16 +130,11 @@ export default async function CreatorOverviewPage() {
           order: { select: { product: { select: { name: true } } } },
         },
       }),
-      prisma.withdrawal.findMany({
+      prisma.payout.findMany({
         where: { creatorId },
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          amountBirr: true,
-          status: true,
-          createdAt: true,
-          decidedAt: true,
-        },
+        orderBy: { paidAt: "desc" },
+        take: 10,
+        select: { id: true, amountBirr: true, paidAt: true },
       }),
       prisma.affiliateLink.findMany({
         where: { creatorId },
@@ -191,10 +159,6 @@ export default async function CreatorOverviewPage() {
     .filter((c) => c.status === "PAID")
     .reduce((sum, c) => sum + c.amountBirr, 0);
   const totalEarned = pendingBirr + paidBirr;
-  const withdrawnTotal = withdrawals
-    .filter((w) => w.status !== "REJECTED")
-    .reduce((sum, w) => sum + w.amountBirr, 0);
-  const availableBalance = Math.max(paidBirr - withdrawnTotal, 0);
 
   const totalViews = links.reduce((sum, link) => sum + link.viewCount, 0);
 
@@ -244,15 +208,14 @@ export default async function CreatorOverviewPage() {
       amount: c.amountBirr,
     });
   }
-  for (const w of withdrawals) {
-    if (w.status !== "APPROVED") continue;
+  for (const payout of payouts) {
     activity.push({
-      id: `w-${w.id}`,
-      label: "Withdrawal to your account",
+      id: `p-${payout.id}`,
+      label: "Friday payout to your account",
       kind: "Payout",
       status: "PAID",
-      at: w.decidedAt ?? w.createdAt,
-      amount: -w.amountBirr,
+      at: payout.paidAt,
+      amount: -payout.amountBirr,
     });
   }
   activity.sort((a, b) => b.at.getTime() - a.at.getTime());
@@ -285,15 +248,12 @@ export default async function CreatorOverviewPage() {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-ink-400">Available to withdraw</p>
+              <p className="text-xs text-ink-400">Pending payout</p>
               <p className="text-[30px] leading-tight font-bold tracking-tight text-foreground">
-                {availableBalance.toLocaleString()}
+                {pendingBirr.toLocaleString("en-US")}
                 <span className="ml-1 text-base font-semibold text-ink-400">
                   ETB
                 </span>
-              </p>
-              <p className="text-xs text-ink-400">
-                {birr(totalEarned)} earned all-time
               </p>
             </div>
           </div>
@@ -302,7 +262,7 @@ export default async function CreatorOverviewPage() {
               href="/creator/earnings"
               className="inline-flex h-10 items-center justify-center gap-1.5 rounded-[10px] bg-teal-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-teal-700"
             >
-              Request withdrawal
+              View earnings
             </Link>
             <Link
               href="/creator/settings"
@@ -334,22 +294,22 @@ export default async function CreatorOverviewPage() {
 
       {/* Row 2: KPI cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <StatCard
+        <CreatorStatCard
           icon={Wallet}
           label="Lifetime earnings"
           value={birr(totalEarned)}
           tint="bg-teal-600 text-white"
         />
-        <StatCard
+        <CreatorStatCard
           icon={Link2}
           label="Active links"
-          value={links.length.toLocaleString()}
+          value={links.length.toLocaleString("en-US")}
           tint="bg-teal-100 text-teal-700"
         />
-        <StatCard
+        <CreatorStatCard
           icon={Eye}
           label="Link views"
-          value={totalViews.toLocaleString()}
+          value={totalViews.toLocaleString("en-US")}
           tint="bg-blue-100 text-blue-700"
         />
       </div>
@@ -382,7 +342,7 @@ export default async function CreatorOverviewPage() {
                       {item.label}
                     </p>
                     <p className="text-xs text-ink-400">
-                      {item.kind} · {new Date(item.at).toLocaleDateString()}
+                      {item.kind} · {formatDate(item.at)}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -393,7 +353,7 @@ export default async function CreatorOverviewPage() {
                       }`}
                     >
                       {item.amount >= 0 ? "+" : "−"}
-                      {Math.abs(item.amount).toLocaleString()} ETB
+                      {Math.abs(item.amount).toLocaleString("en-US")} ETB
                     </span>
                   </div>
                 </div>
@@ -407,7 +367,7 @@ export default async function CreatorOverviewPage() {
         </div>
 
         {/* Earnings breakdown */}
-        <div className="flex flex-col gap-5 rounded-[16px] border border-border bg-card p-5 shadow-card">
+        <div className="flex flex-col gap-5 rounded-[16px] border border-border bg-card p-5 shadow-card hidden">
           <h2 className="text-base font-bold text-foreground">
             Earnings breakdown
           </h2>
@@ -462,8 +422,8 @@ export default async function CreatorOverviewPage() {
           </div>
 
           <p className="text-xs text-ink-400">
-            Based on {commissions.length.toLocaleString()} commission
-            {commissions.length === 1 ? "" : "s"} across {ordersCount.toLocaleString()}{" "}
+            Based on {commissions.length.toLocaleString("en-US")} commission
+            {commissions.length === 1 ? "" : "s"} across {ordersCount.toLocaleString("en-US")}{" "}
             referred order{ordersCount === 1 ? "" : "s"}.
           </p>
         </div>

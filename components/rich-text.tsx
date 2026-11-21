@@ -9,6 +9,9 @@ export const richTextClass = cn(
   "[&_h2]:mt-2 [&_h2]:mb-1 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-foreground",
   "[&_h3]:mt-2 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground",
   "[&_p]:my-1",
+  // Pasted descriptions often use plain <div> sections — give top-level
+  // sections breathing room so they don't read as one block.
+  "[&>div+div]:mt-3",
   "[&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-5",
   "[&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-5",
   "[&_li]:my-0.5",

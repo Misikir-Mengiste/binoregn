@@ -9,12 +9,14 @@ import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
 import { OverviewOrders } from "./overview-orders";
 import { GmvCommissionCard } from "./gmv-commission-card";
+import { requireAdminPage } from "@/lib/auth-helpers";
 
 function pct(numerator: number, denominator: number) {
   return denominator === 0 ? 0 : Math.round((numerator / denominator) * 100);
 }
 
 export default async function AdminOverviewPage() {
+  await requireAdminPage();
   const session = await auth();
   const email = session?.user?.email ?? "";
   const displayName = email.split("@")[0] || "Admin";
@@ -91,14 +93,14 @@ export default async function AdminOverviewPage() {
           },
           {
             label: "Completed Order",
-            value: deliveredOrders.toLocaleString(),
+            value: deliveredOrders.toLocaleString("en-US"),
             caption: "Completed Order last 365 days",
             icon: CheckCircle2,
             accent: "mint",
           },
           {
             label: "Cancelled Order",
-            value: cancelledOrders.toLocaleString(),
+            value: cancelledOrders.toLocaleString("en-US"),
             caption: "Cancelled Order last 365 days",
             icon: XCircle,
             accent: "coral",
@@ -200,7 +202,7 @@ export default async function AdminOverviewPage() {
               <div className="rounded-[8px] border border-border p-3">
                 <p className="text-xs text-ink-400">Total Products</p>
                 <p className="text-lg font-bold text-foreground">
-                  {totalProducts.toLocaleString()}
+                  {totalProducts.toLocaleString("en-US")}
                 </p>
                 <div className="mt-2 flex h-6 items-end gap-0.5">
                   {[40, 55, 35, 70, 45, 60, 50].map((h, i) => (
@@ -215,7 +217,7 @@ export default async function AdminOverviewPage() {
               <div className="rounded-[8px] border border-border p-3">
                 <p className="text-xs text-ink-400">Total Orders</p>
                 <p className="text-lg font-bold text-foreground">
-                  {totalOrders.toLocaleString()}
+                  {totalOrders.toLocaleString("en-US")}
                 </p>
                 <div className="mt-2 flex h-6 items-end gap-0.5">
                   {[50, 35, 65, 45, 75, 55, 40].map((h, i) => (

@@ -44,6 +44,7 @@ enum CreatorCategory {
 enum CreatorProfileStatus {
   PENDING
   APPROVED
+  REJECTED
 }
 
 enum PayoutOptionCategory {
@@ -87,6 +88,11 @@ model User {
   creatorProfileStatus         CreatorProfileStatus?
   creatorOnboardingCompletedAt DateTime?
 
+  // Telegram (lib/telegram.ts). telegramLinkToken is a one-time random
+  // token in the bot deep link; the webhook swaps it for the chat id.
+  telegramChatId    String? @unique
+  telegramLinkToken String? @unique
+
   accounts Account[]
   sessions Session[]
 
@@ -94,7 +100,8 @@ model User {
   affiliateLinks  AffiliateLink[]
   ordersAsCreator Order[]         @relation("OrderCreator")
   commissions     Commission[]
-  withdrawals     Withdrawal[]
+  payouts         Payout[]
+  notifications   Notification[]
 }
 
 model Account {
@@ -149,6 +156,13 @@ model Product {
   // currency-conversion or minor-unit (cents) handling is needed.
   priceBirr      Int
   compareAtBirr  Int?
+  // Creator discount code (lib/discount.ts): a fixed Birr amount off the
+  // order when the buyer types discountCode at checkout. Only active while
+  // discountEnabled is on. The code is never shown on the buyer's product
+  // page — creators share it. Commission stays the full commissionBirr.
+  discountEnabled Boolean @default(false)
+  discountBirr    Int?
+  discountCode    String?
   rating         Float?
   ratingCount    Int?     @default(0)
   soldCount      Int?     @default(0)
@@ -164,6 +178,13 @@ model Product {
   imageUrls      String[]
   
   stock          Int      @default(100)
+  // Max creators who may promote this product (approved = one spot
+  // each; pending requests don't hold a spot). null = unlimited.
+  // Enforced in lib/promotion.ts callers (apply + admin approve).
+  maxCreators    Int?
+  // Four badges under Buy Now on the product page (lib/product-badges.ts
+  // holds the same defaults). Empty entries are hidden.
+  trustBadges    String[] @default(["Free Delivery", "Delivered within 2 hours", "Same day return", "Nothing to pay before delivery"])
 
   isPublished    Boolean  @default(true)
   createdAt      DateTime @default(now())
@@ -197,7 +218,9 @@ model Application {
 
 model AffiliateLink {
   id            String      @id @default(cuid())
-  slug          String      @unique @default(cuid())
+  // Short public code — the link URL is /r/[slug]. No default: always
+  // set explicitly from lib/affiliate-link-code.ts.
+  slug          String      @unique
   creatorId     String
   creator       User        @relation(fields: [creatorId], references: [id])
   productId     String
@@ -209,8 +232,25 @@ model AffiliateLink {
   viewCount     Int         @default(0)
 
   orders Order[]
+  visits LinkVisit[]
 
   @@unique([creatorId, productId])
+}
+
+// One row per (link, visitor). viewCount on AffiliateLink only goes up
+// when this visitor's last counted view is 24h+ old (or there is none),
+// so the same person opening a link repeatedly counts once a day.
+// visitorId is a random id kept in the buyer's "bv" cookie
+// (app/api/public/links/[slug]/view/route.ts).
+model LinkVisit {
+  id            String        @id @default(cuid())
+  linkId        String
+  link          AffiliateLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  visitorId     String
+  lastCountedAt DateTime      @default(now())
+
+  @@unique([linkId, visitorId])
+  @@index([lastCountedAt])
 }
 
 enum OrderDeliveryStatus {
@@ -245,6 +285,11 @@ model Order {
   quantity     Int           @default(1)
   color        String?
   size         String?
+  // Discount actually given on this order (fixed Birr, once per order) and
+  // the code used — snapshotted at checkout so later product changes never
+  // alter it. Total = product.priceBirr × quantity − discountBirr.
+  discountBirr Int           @default(0)
+  discountCode String?
 
   deliveryStatus   OrderDeliveryStatus @default(PLACED)
   fulfillmentStatus OrderFulfillmentStatus @default(PLACED)
@@ -263,12 +308,9 @@ enum CommissionStatus {
   PAID
 }
 
-enum WithdrawalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
+// createdAt = when the commission became PENDING (the order was marked
+// Delivered). That timestamp decides which Friday payout covers it
+// (lib/commission/payouts.ts).
 model Commission {
   id         String           @id @default(cuid())
   orderId    String           @unique
@@ -279,21 +321,91 @@ model Commission {
   status     CommissionStatus @default(PENDING)
   createdAt  DateTime         @default(now())
   paidAt     DateTime?
+  // Set when a Friday payout pays this commission (status → PAID).
+  payoutId   String?
+  payout     Payout?          @relation(fields: [payoutId], references: [id])
 
   deletedAt  DateTime?
+
+  @@index([status, createdAt])
 }
 
-model Withdrawal {
-  id            String           @id @default(cuid())
-  creatorId     String
-  creator       User             @relation(fields: [creatorId], references: [id])
-  amountBirr    Int
-  payoutMethod  PayoutMethod
+// One creator's share of a Friday payout (replaces creator withdrawal
+// requests, 2026-11-11). Created only when admin marks it paid; the
+// "due" list before that is computed live from PENDING commissions.
+// Payout details are snapshotted so later profile edits don't rewrite
+// where a past payout was sent.
+model Payout {
+  id                  String        @id @default(cuid())
+  creatorId           String
+  creator             User          @relation(fields: [creatorId], references: [id])
+  amountBirr          Int
+  // The Thursday 11:59 PM (Addis Ababa) cutoff this payout covers.
+  cutoffAt            DateTime
+  paidAt              DateTime      @default(now())
+  payoutMethod        PayoutMethod?
   payoutAccountName   String?
   payoutAccountNumber String?
   payoutBankName      String?
-  status       WithdrawalStatus @default(PENDING)
-  createdAt    DateTime         @default(now())
-  decidedAt    DateTime?
-  deletedAt    DateTime?
+
+  commissions Commission[]
+
+  @@index([creatorId])
+}
+
+// Creator notifications (progress-tracker 2026-11-11): saved here for
+// the dashboard bell and also sent on Telegram when the creator has
+// connected it (lib/notifications.ts). One row per creator per event.
+enum NotificationType {
+  PROFILE_APPROVED
+  PROFILE_REJECTED
+  REQUEST_APPROVED
+  REQUEST_REJECTED
+  // Covers both "order delivered" and "commission added" — they happen
+  // at the same moment, so creators get one message, not two.
+  ORDER_DELIVERED
+  COMMISSION_PAID
+  ANNOUNCEMENT
+  // A promoted product went out of stock/unpublished (links show "not
+  // found"), or came back (lib/notifications.ts notifyProductAvailability).
+  PRODUCT_PAUSED
+  PRODUCT_RESUMED
+}
+
+model Notification {
+  id             String           @id @default(cuid())
+  creatorId      String
+  creator        User             @relation(fields: [creatorId], references: [id])
+  type           NotificationType
+  title          String
+  body           String
+  href           String?
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+  announcementId String?
+  announcement   Announcement?    @relation(fields: [announcementId], references: [id])
+
+  @@index([creatorId, createdAt])
+}
+
+// An admin message to all approved creators; fanned out into one
+// Notification per creator when sent.
+model Announcement {
+  id            String         @id @default(cuid())
+  title         String
+  body          String
+  createdAt     DateTime       @default(now())
+  notifications Notification[]
+}
+
+// Site-wide settings admins edit in Settings — a single row (id "site",
+// read/created by lib/site-settings.ts).
+// orderPhone + showOrderPhone: the "Call us" number with a Call now button
+// on the buyer's order confirmation (between order number and tracking
+// link). Hidden when showOrderPhone is false or no number is set.
+model SiteSetting {
+  id             String   @id @default("site")
+  orderPhone     String?
+  showOrderPhone Boolean  @default(false)
+  updatedAt      DateTime @updatedAt
 }

@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Locally uploaded product images (not committed)
 /public/uploads/
+
+# Local data backups (may contain product content)
+/backups/

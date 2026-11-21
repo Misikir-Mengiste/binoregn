@@ -1,4 +1,6 @@
 import type { NextRequest } from "next/server";
+import { notifyAdminsTelegram } from "@/lib/telegram";
+import { emailCreator, escapeHtml } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireCreator } from "@/lib/auth-helpers";
@@ -74,6 +76,18 @@ export async function POST(request: NextRequest) {
       ...payoutFields,
     },
     select: { id: true },
+  });
+
+  await notifyAdminsTelegram(
+    `🙋 <b>New creator signup</b>\n${escapeHtml(displayName || fullName)} (@${escapeHtml(username)}) · ${escapeHtml(String(platform))}\nWaiting for your approval.`,
+  );
+
+  emailCreator(authed.id, {
+    subject: "We received your creator application",
+    heading: "Thanks for applying to Binoregn",
+    body: "Your creator profile is under review. We usually reply within 1–2 working days, and we'll email you as soon as it's approved.",
+    href: "/creator",
+    ctaLabel: "Check your status",
   });
 
   return apiSuccess(user, 200);

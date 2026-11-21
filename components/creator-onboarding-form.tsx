@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { CREATOR_CATEGORIES, CREATOR_PLATFORMS } from "@/lib/creator-options";
+import { Logo } from "@/components/logo";
+import {
+  USERNAME_HINT,
+  normalizeUsername,
+  sanitizeUsernameInput,
+  usernameError,
+} from "@/lib/username";
 
 type PayoutOptionRow = { category: "BANK" | "WALLET"; name: string };
 
@@ -27,7 +34,6 @@ type FormState = {
 };
 
 export function CreatorOnboardingForm({
-  email,
   initialValues,
 }: {
   email: string;
@@ -52,6 +58,9 @@ export function CreatorOnboardingForm({
     bankAccountName: initialValues?.bankAccountName ?? "",
     bankAccountNumber: initialValues?.bankAccountNumber ?? "",
   });
+  // Only show the username error once they've typed or tried to continue.
+  const [usernameTouched, setUsernameTouched] = useState(false);
+  const usernameProblem = usernameError(form.username);
   const [bankOptions, setBankOptions] = useState<string[]>([]);
   const [walletOptions, setWalletOptions] = useState<string[]>([]);
 
@@ -88,7 +97,7 @@ export function CreatorOnboardingForm({
     try {
       const payload = {
         fullName: form.fullName.trim(),
-        username: form.username.trim(),
+        username: normalizeUsername(form.username),
         phone: `+251${form.phone.trim()}`,
         displayName: form.displayName.trim(),
         platform: form.platform,
@@ -128,6 +137,7 @@ export function CreatorOnboardingForm({
 
   return (
     <div className="mx-auto w-full max-w-md rounded-[18px] bg-card px-6 py-7 shadow-card">
+      <Logo className="mx-auto mb-6 h-7" />
       <div className="flex items-center justify-between text-xs font-semibold text-ink-400">
         <span>STEP {step} OF 4</span>
         <span>
@@ -166,10 +176,26 @@ export function CreatorOnboardingForm({
               id="username"
               className="h-12 rounded-[12px]"
               value={form.username}
-              onChange={(event) => updateField("username", event.target.value)}
+              onChange={(event) => {
+                setUsernameTouched(true);
+                updateField("username", sanitizeUsernameInput(event.target.value));
+              }}
               placeholder="abebe_creates"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              aria-invalid={usernameTouched && usernameProblem !== null}
+              aria-describedby="username-help"
             />
-            <p className="text-xs text-ink-400">This is how brands will find you.</p>
+            {usernameTouched && usernameProblem ? (
+              <p id="username-help" className="text-xs font-medium text-coral-500">
+                {usernameProblem}
+              </p>
+            ) : (
+              <p id="username-help" className="text-xs text-ink-400">
+                {USERNAME_HINT}. This is how brands will find you.
+              </p>
+            )}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="phone">Phone number</Label>
@@ -190,7 +216,14 @@ export function CreatorOnboardingForm({
           <Button
             type="button"
             className="h-12 rounded-[14px]"
-            onClick={() => setStep(2)}
+            onClick={() => {
+              if (usernameProblem) {
+                setUsernameTouched(true);
+                document.getElementById("username")?.focus();
+                return;
+              }
+              setStep(2);
+            }}
           >
             Continue
             <MoveRight className="ml-2 h-4 w-4" />

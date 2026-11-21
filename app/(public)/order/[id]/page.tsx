@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { orderNumber } from "@/lib/order-number";
+import { formatDate } from "@/lib/format";
+import { orderTotalBirr } from "@/lib/discount";
 
 const STEPS = ["PLACED", "PROCESSING", "SHIPPED", "DELIVERED"] as const;
 
@@ -23,6 +26,7 @@ export default async function OrderTrackingPage({
       createdAt: true,
       product: { select: { name: true, imageUrls: true, priceBirr: true } },
       quantity: true,
+      discountBirr: true,
     },
   });
 
@@ -33,11 +37,11 @@ export default async function OrderTrackingPage({
   const stepIndex = Math.max(0, STEPS.indexOf(order.fulfillmentStatus));
 
   return (
-    <main className="min-h-screen bg-background px-6 py-10">
+    <main className="flex-1 bg-background px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto w-full max-w-4xl">
         <h1 className="text-xl font-bold text-foreground">Order tracking</h1>
         <p className="mt-1 text-sm text-ink-600">
-          Order #{order.id.slice(-8)}
+          Order #{orderNumber(order.id)}
         </p>
 
         <div className="mt-6 rounded-[12px] border border-border bg-card shadow-card">
@@ -60,8 +64,21 @@ export default async function OrderTrackingPage({
                   {order.product.name}
                 </p>
                 <p className="text-sm text-ink-600">
-                  {order.product.priceBirr} ETB · Qty {order.quantity}
+                  {order.product.priceBirr.toLocaleString("en-US")} ETB · Qty {order.quantity}
                 </p>
+                {order.discountBirr > 0 ? (
+                  <p className="text-sm text-ink-600">
+                    Discount −{order.discountBirr.toLocaleString("en-US")} ETB · You pay{" "}
+                    <span className="font-semibold text-foreground">
+                      {orderTotalBirr({
+                        priceBirr: order.product.priceBirr,
+                        quantity: order.quantity,
+                        discountBirr: order.discountBirr,
+                      }).toLocaleString("en-US")}{" "}
+                      ETB
+                    </span>
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -75,7 +92,7 @@ export default async function OrderTrackingPage({
               <div>
                 <p className="font-semibold text-foreground">Contact</p>
                 <p>{order.buyerPhone}</p>
-                <p>Placed {new Date(order.createdAt).toLocaleDateString()}</p>
+                <p>Placed {formatDate(order.createdAt)}</p>
               </div>
             </div>
           </div>

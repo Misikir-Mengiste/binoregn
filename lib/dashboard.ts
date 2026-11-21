@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { orderTotalBirr } from "@/lib/discount";
 
 // Shared by GET /api/admin/dashboard/summary and the admin
 // Overview page's server component — one place for this
@@ -84,6 +85,7 @@ export async function getGmvAndCommissionSummary(): Promise<{
       select: {
         createdAt: true,
         quantity: true,
+        discountBirr: true,
         product: { select: { priceBirr: true } },
       },
     }),
@@ -97,7 +99,12 @@ export async function getGmvAndCommissionSummary(): Promise<{
     gmv: bucketByDate(
       deliveredOrders,
       (order) => order.createdAt,
-      (order) => order.product.priceBirr * order.quantity,
+      (order) =>
+        orderTotalBirr({
+          priceBirr: order.product.priceBirr,
+          quantity: order.quantity,
+          discountBirr: order.discountBirr,
+        }),
     ),
     commissionPaid: bucketByDate(
       paidCommissions,

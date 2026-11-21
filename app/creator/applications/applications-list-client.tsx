@@ -1,10 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CheckCircle2, Clock, FileText, XCircle } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { SearchInput } from "@/components/search-input";
 import { Pagination } from "@/components/pagination";
 import { CreatorStatCard } from "@/components/creator-stat-card";
+import { shortProductName } from "@/lib/short-name";
+import { formatDate } from "@/lib/format";
 
 type ApplicationRow = {
   id: string;
@@ -31,11 +34,13 @@ export function ApplicationsListClient({
   const counts = useMemo(() => {
     let approved = 0;
     let pending = 0;
+    let rejected = 0;
     for (const application of allApplications) {
       if (application.status === "APPROVED") approved += 1;
       else if (application.status === "PENDING") pending += 1;
+      else if (application.status === "REJECTED") rejected += 1;
     }
-    return { total: allApplications.length, approved, pending };
+    return { total: allApplications.length, approved, pending, rejected };
   }, [allApplications]);
 
   const filtered = useMemo(() => {
@@ -62,21 +67,30 @@ export function ApplicationsListClient({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <CreatorStatCard
-          value={counts.total.toLocaleString()}
+          icon={FileText}
           label="Total applications"
-          bg="bg-teal-100"
+          value={counts.total.toLocaleString("en-US")}
+          tint="bg-teal-100 text-teal-700"
         />
         <CreatorStatCard
-          value={counts.approved.toLocaleString()}
+          icon={CheckCircle2}
           label="Approved"
-          bg="bg-mint-100"
+          value={counts.approved.toLocaleString("en-US")}
+          tint="bg-mint-100 text-mint-500"
         />
         <CreatorStatCard
-          value={counts.pending.toLocaleString()}
+          icon={Clock}
           label="Pending review"
-          bg="bg-peach-100"
+          value={counts.pending.toLocaleString("en-US")}
+          tint="bg-peach-100 text-peach-700"
+        />
+        <CreatorStatCard
+          icon={XCircle}
+          label="Not approved"
+          value={counts.rejected.toLocaleString("en-US")}
+          tint="bg-coral-100 text-coral-500"
         />
       </div>
 
@@ -128,19 +142,19 @@ export function ApplicationsListClient({
                         </div>
                         <div>
                           <p className="font-semibold text-foreground">
-                            {application.product.name}
+                            <span title={application.product.name}>{shortProductName(application.product.name)}</span>
                           </p>
                           <p className="text-xs text-ink-400">
-                            {application.product.priceBirr.toLocaleString()} ETB
+                            {application.product.priceBirr.toLocaleString("en-US")} ETB
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-5 py-3 text-ink-600">
-                      {application.product.commissionBirr.toLocaleString()} ETB
+                      {application.product.commissionBirr.toLocaleString("en-US")} ETB
                     </td>
                     <td className="px-5 py-3 text-ink-600">
-                      {new Date(application.createdAt).toLocaleDateString()}
+                      {formatDate(application.createdAt)}
                     </td>
                     <td className="px-5 py-3">
                       <StatusBadge status={application.status} />

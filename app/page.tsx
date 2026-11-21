@@ -14,7 +14,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { BrandMark } from "@/components/logo";
+import { Logo } from "@/components/logo";
 
 const YEAR = new Date().getFullYear();
 
@@ -134,16 +134,11 @@ export default function Home() {
         <Wallet className="pointer-events-none absolute -right-10 top-24 h-72 w-72 text-white/10" />
 
         {/* Floating frosted pill nav */}
-        <header className="relative z-10 mx-auto mt-4 w-full max-w-6xl px-4">
+        <header className="relative z-10 mx-auto mt-4 w-full max-w-5xl px-4">
           <div className="flex items-center justify-between gap-4 rounded-full border border-white/15 bg-black/20 py-2 pl-4 pr-2 shadow-lg shadow-black/10 backdrop-blur-md">
-            <div className="flex items-center gap-2.5 pl-1">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-sm font-bold leading-none text-white">
-                B
-              </span>
-              <span className="text-sm font-bold text-white">
-                Binoregn<span className="text-teal-500">.</span>
-              </span>
-            </div>
+            <Link href="/" className="flex items-center pl-2" aria-label="Binoregn home">
+              <Logo variant="white" className="h-5 sm:h-6" />
+            </Link>
             <nav className="hidden items-center gap-7 text-sm font-medium text-white/80 lg:flex">
               {NAV_LINKS.map((link) => (
                 <a
@@ -173,7 +168,7 @@ export default function Home() {
         </header>
 
         {/* Hero content — text only; the right side is intentionally open */}
-        <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 items-center px-6 py-12">
+        <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 items-center px-6 py-12">
           <div className="max-w-2xl">
             <h1 className="text-5xl font-bold leading-[1.02] tracking-tight sm:text-6xl">
               Turn your influence
@@ -213,7 +208,7 @@ export default function Home() {
 
       {/* ============ BENTO CARDS (overlapping the hero) ============ */}
       {/* relative+z-20 so these float ABOVE the positioned hero section. */}
-      <section className="relative z-20 mx-auto -mt-28 max-w-6xl px-6">
+      <section className="relative z-20 mx-auto -mt-28 max-w-5xl px-6">
         {/* Peeking widget cards (wide screens only). */}
         <div className="pointer-events-none absolute -left-6 top-6 hidden w-44 rounded-2xl bg-card p-3 shadow-card xl:block">
           <div className="flex items-center gap-2.5">
@@ -363,7 +358,7 @@ export default function Home() {
       </section>
 
       {/* ============ STAT CARDS ============ */}
-      <section className="mx-auto max-w-6xl px-6 pb-8">
+      <section className="mx-auto max-w-5xl px-6 pb-8">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {STATS.map((stat) => (
             <div
@@ -403,7 +398,7 @@ export default function Home() {
 
       {/* ============ BRAND LOGO STRIP (DEMO) ============ */}
       <section className="border-y border-border bg-surface-100">
-        <div className="mx-auto max-w-6xl px-6 py-10">
+        <div className="mx-auto max-w-5xl px-6 py-10">
           <p className="text-center text-xs font-semibold uppercase tracking-wide text-ink-400">
             Promote products from brands creators love
           </p>
@@ -430,7 +425,7 @@ export default function Home() {
         <div className="pointer-events-none absolute -left-24 top-4 -z-10 h-72 w-72 rounded-full bg-teal-400/25 blur-3xl" />
         <div className="pointer-events-none absolute -right-20 bottom-4 -z-10 h-80 w-80 rounded-full bg-blue-400/25 blur-3xl" />
         <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-200/30 blur-3xl" />
-        <div className="relative mx-auto max-w-6xl px-6">
+        <div className="relative mx-auto max-w-5xl px-6">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
             How it works
@@ -478,7 +473,7 @@ export default function Home() {
         <div className="pointer-events-none absolute -left-24 top-4 -z-10 h-72 w-72 rounded-full bg-teal-400/25 blur-3xl" />
         <div className="pointer-events-none absolute -right-20 bottom-4 -z-10 h-80 w-80 rounded-full bg-blue-400/25 blur-3xl" />
         <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-200/30 blur-3xl" />
-        <div className="relative mx-auto grid max-w-6xl gap-12 px-6 py-28 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="relative mx-auto grid max-w-5xl gap-12 px-6 py-28 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
               For creators
@@ -529,7 +524,7 @@ export default function Home() {
       </section>
 
       {/* ============ FINAL CTA ============ */}
-      <section className="mx-auto max-w-6xl px-6 py-28">
+      <section className="mx-auto max-w-5xl px-6 py-28">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-700 via-teal-600 to-teal-500 px-8 py-16 text-center text-white sm:px-16">
           <Wallet className="pointer-events-none absolute -left-8 -top-8 h-56 w-56 text-white/10" />
           <h2 className="relative mx-auto max-w-2xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
@@ -559,16 +554,11 @@ export default function Home() {
       </section>
 
       {/* ============ FOOTER ============ */}
-      <footer className="relative overflow-hidden bg-[#0f1115] text-white">
-        <div className="relative z-10 mx-auto max-w-6xl px-6 pt-16">
+      <footer className="relative overflow-hidden bg-ink-900 text-white">
+        <div className="relative z-10 mx-auto max-w-5xl px-6 pt-16">
           <div className="grid gap-10 pb-14 md:grid-cols-[1.6fr_1fr_1fr_1fr]">
             <div>
-              <div className="flex items-center gap-2.5">
-                <BrandMark className="h-9 w-9 text-sm" />
-                <span className="text-lg font-bold tracking-tight">
-                  Binoregn<span className="text-teal-500">.</span>
-                </span>
-              </div>
+              <Logo variant="white" className="h-7" />
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">
                 Turn your influence into affiliate income. Promote products
                 you believe in and earn a fixed commission on every delivered

@@ -12,18 +12,19 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AdminNotification } from "@/lib/admin-notifications";
+import { formatDate } from "@/lib/format";
 
 const ICON: Record<AdminNotification["type"], LucideIcon> = {
   APPLICATION: ClipboardCheck,
   CREATOR: UserPlus,
-  WITHDRAWAL: Wallet,
+  PAYOUT: Wallet,
   ORDER: ShoppingBag,
 };
 
 const TILE: Record<AdminNotification["type"], string> = {
   APPLICATION: "bg-teal-100 text-teal-700",
   CREATOR: "bg-blue-100 text-blue-700",
-  WITHDRAWAL: "bg-peach-100 text-peach-700",
+  PAYOUT: "bg-peach-100 text-peach-700",
   ORDER: "bg-mint-100 text-mint-500",
 };
 
@@ -152,7 +153,7 @@ export function AdminNotificationsBell({
                             {notification.detail}
                           </p>
                           <p className="mt-0.5 text-[11px] text-ink-400">
-                            {new Date(notification.at).toLocaleDateString()}
+                            {formatDate(notification.at)}
                           </p>
                         </div>
                       </Link>

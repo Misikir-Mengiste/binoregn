@@ -66,7 +66,10 @@ Tailwind CSS v4. Components live in `components/ui/`. Add with
   teal-700 text. User identity + sign-out in sidebar footer.
 - **List pages:** H1 + subtitle · primary CTA · KPI row · search/
   filters · white table/card body.
-- **Public storefront** (`/p/[creator]/[slug]`, built 2026-07-19): no
+- **Brand refresh (2026-11-11):** see design-system.md "Color" and
+  "Logo & layout" — brand palette, Inter with Semibold max, logo on
+  every page, narrower containers, swipeable gallery.
+- **Public storefront** (`/r/[slug]`, built 2026-07-19 at `/p/[creator]/[slug]`, moved 2026-11-10): no
   sidebar. Simple centered brand header (no nav), then a two-column
   product-showcase + checkout-form layout on desktop, stacking on
   mobile. Same card/radius/shadow tokens as admin/creator, no

@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { ProductsClient } from "./products-client";
+import { requireAdminPage } from "@/lib/auth-helpers";
 
 export default async function AdminProductsPage() {
+  await requireAdminPage();
   const [products, activeLinkCount, pendingApplicationCount] =
     await Promise.all([
       prisma.product.findMany({

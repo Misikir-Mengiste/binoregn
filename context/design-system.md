@@ -11,27 +11,34 @@ stock, card payments).
 
 ## Color
 
+Brand sheet (2026-11-11): **#0CB587** green, **#E4F5FF** light blue,
+**#B9EEBA** light green, **#070707** black, **#B2B50C** olive,
+**#B5200C** red. Token names are kept from the earlier palette so every
+existing class picks the brand up; "derived" values are darker/lighter
+steps of a brand colour for hover states and readable small text.
+
 | Token | Hex | Usage |
 |---|---|---|
-| `--teal-600` | `#00A389` | Primary brand, CTAs, active accents |
-| `--teal-700` | `#008F78` | Primary hover / pressed |
-| `--teal-500` | `#2EB6A1` | Secondary accents, charts |
-| `--teal-100` | `#E6F7F4` | Soft backgrounds, active nav bg |
-| `--coral-500` | `#F14C4C` | Error, "Rejected" / cancelled |
-| `--coral-100` | `#FDE7E7` | Soft coral background |
-| `--mint-500` | `#3BB273` | "Delivered" / "Approved" / success |
-| `--mint-100` | `#E1F6E9` | Soft mint background |
-| `--peach-100` | `#FDEEDC` | "Pending" status background |
-| `--peach-700` | `#B8620A` | "Pending" status text |
-| `--orange-500` | `#F5A524` | Attention / "new orders" accent |
-| `--blue-100` | `#E8F1FB` | "Completed"-style soft badge bg |
-| `--blue-700` | `#2F6FED` | "Completed"-style badge text |
-| `--ink-900` | `#1E1B2E` | Primary text |
-| `--ink-600` | `#5A5770` | Secondary text |
-| `--ink-400` | `#9A97AC` | Muted text, placeholders |
+| `--teal-600` | `#0CB587` | Brand green — primary, CTAs, active accents |
+| `--teal-700` | `#09996F` | Derived — hover / pressed, text on tints |
+| `--teal-500` | `#3CC89F` | Derived — secondary accents, charts |
+| `--teal-100` | `#E3F7EF` | Derived — soft backgrounds, active nav bg |
+| `--coral-500` | `#B5200C` | Brand red — error, "Rejected" / cancelled |
+| `--coral-100` | `#FBE6E2` | Derived — soft red background |
+| `--mint-500` | `#0E8F55` | Derived — readable success text |
+| `--mint-200` | `#B9EEBA` | Brand light green — accents, logo dots on green |
+| `--mint-100` | `#E6F9E6` | Derived — success / COD pill background |
+| `--peach-100` | `#F4F5D4` | Derived — "Pending" status background |
+| `--peach-700` | `#6C6E06` | Derived — "Pending" status text (olive) |
+| `--orange-500` | `#A2A50A` | Brand olive, one step darker for text |
+| `--blue-100` | `#E4F5FF` | Brand light blue — info tints |
+| `--blue-700` | `#1C6FA8` | Derived — info text, charts |
+| `--ink-900` | `#070707` | Brand black — primary text |
+| `--ink-600` | `#4A524E` | Secondary text |
+| `--ink-400` | `#8A928E` | Muted text, placeholders |
 | `--surface-0` | `#FFFFFF` | Card / sidebar surfaces |
-| `--surface-100` | `#F4F7F6` | Page background |
-| `--border` | `#E5E9E8` | Hairline borders |
+| `--surface-100` | `#F1F9FD` | Page background (lighter #E4F5FF) |
+| `--border` | `#E1EBEF` | Hairline borders |
 
 Legacy aliases (map to teal so older class names still resolve):
 `--violet-600` → `--teal-600`, `--violet-700` → `--teal-700`,
@@ -42,7 +49,11 @@ Legacy aliases (map to teal so older class names still resolve):
 
 ## Typography
 
-Font stack: `'Segoe UI', Inter, -apple-system, sans-serif`
+Brand fonts: **Lufga** (headings) & **Inter**, weights Regular / Medium /
+Semibold only — `--font-weight-bold` is 600, so `font-bold` renders
+Semibold. Lufga is a licensed font not in the repo, so everything uses
+Inter (`next/font/google`) until its files are added. Stack:
+`Inter, -apple-system, 'Segoe UI', sans-serif`
 
 | Role | Size | Weight | Example |
 |---|---|---|---|
@@ -53,6 +64,24 @@ Font stack: `'Segoe UI', Inter, -apple-system, sans-serif`
 | Caption | 12px | 400 | `last 365 days` |
 
 ---
+
+## Logo & layout
+
+- Logo: `components/logo.tsx` → `public/brand/logo.png` (charcoal) and
+  `public/brand/logo-white.png` (white letters, #B9EEBA dots, for green
+  or dark backgrounds). Both are the brand artwork
+  (`public/binoregn-logo.png`) trimmed and scaled to 600px (~11 KB).
+  Size by height (`h-5`–`h-8`).
+- Every page shows the logo: landing header/footer, sign-in,
+  onboarding/pending cards, dashboard sidebars + mobile headers, buyer
+  page header (not a link), invoice.
+- Max content width: buyer pages and landing `max-w-5xl` (1024px);
+  dashboard content `max-w-[1120px]`.
+- Product gallery: native scroll-snap carousel (swipe/trackpad), dots on
+  phones, arrows + "n / N" from `sm`, thumbnails, arrow keys.
+- Collapsible sections animate height with grid-rows 0fr↔1fr (300ms);
+  "See more" animates max-height to the measured content height; both
+  honour prefers-reduced-motion.
 
 ## Shape & Elevation
 

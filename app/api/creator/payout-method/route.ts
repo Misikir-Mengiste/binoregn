@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireCreator } from "@/lib/auth-helpers";
 import { payoutMethodSchema } from "@/lib/validations/payout";
+import { alertIfPayoutChanged } from "@/lib/payout-change-alert";
 
 const PAYOUT_SELECT = {
   payoutMethod: true,
@@ -46,6 +47,11 @@ export async function PATCH(request: NextRequest) {
       ? parsed.data.payoutBankName
       : null;
 
+  const before = await prisma.user.findUnique({
+    where: { id: authed.id },
+    select: PAYOUT_SELECT,
+  });
+
   const user = await prisma.user.update({
     where: { id: authed.id },
     data: {
@@ -56,6 +62,8 @@ export async function PATCH(request: NextRequest) {
     },
     select: PAYOUT_SELECT,
   });
+
+  alertIfPayoutChanged(authed.id, before, user);
 
   return apiSuccess(user);
 }

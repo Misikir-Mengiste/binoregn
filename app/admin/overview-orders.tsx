@@ -7,6 +7,8 @@ import { TableToolbar } from "@/components/table-toolbar";
 import { InitialsAvatar } from "@/components/initials-avatar";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/pagination";
+import { shortProductName } from "@/lib/short-name";
+import { formatDate } from "@/lib/format";
 
 type OrderRow = {
   id: string;
@@ -93,7 +95,7 @@ export function OverviewOrders({ orders }: { orders: OrderRow[] }) {
                     )}
                     <div>
                       <p className="font-semibold text-foreground">
-                        {order.product.name}
+                        <span title={order.product.name}>{shortProductName(order.product.name)}</span>
                       </p>
                       <p className="text-xs text-ink-400">Affiliate product</p>
                     </div>
@@ -112,12 +114,12 @@ export function OverviewOrders({ orders }: { orders: OrderRow[] }) {
                     #{order.id.slice(0, 10)}
                   </p>
                   <p className="text-xs text-ink-400">
-                    {new Date(order.createdAt).toLocaleDateString()}
+                    {formatDate(order.createdAt)}
                   </p>
                 </td>
                 <td className="px-5 py-3.5">
                   <p className="font-semibold text-foreground">
-                    {order.product.priceBirr.toLocaleString()} ETB
+                    {order.product.priceBirr.toLocaleString("en-US")} ETB
                   </p>
                   <p className="text-xs text-ink-400">Cash on Delivery</p>
                 </td>

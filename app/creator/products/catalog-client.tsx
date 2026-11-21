@@ -1,43 +1,38 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/search-input";
-import { CopyButton } from "@/components/copy-button";
-import { ExpandableDescription } from "@/components/expandable-description";
 import { cn } from "@/lib/utils";
+import type { PromoteState } from "@/lib/promotion";
 
 type CatalogProduct = {
   id: string;
   name: string;
-  description: string | null;
   category: string | null;
-  subCategory: string | null;
   priceBirr: number;
   commissionBirr: number;
   imageUrls: string[];
-  colors: string[];
   sizes: string[];
-  features: string[];
-  care: string[];
-  shipping: string[];
-  returns: string[];
-  applicationStatus: string | null;
-  affiliateLinkSlug: string | null;
+  promoteKind: PromoteState["kind"];
+  spotsLeft: number | null;
 };
 
-// Commission-request status shown as a colored banner on the top of each
-// product card. null status (never applied) shows no banner — an Apply
-// button appears instead.
-const PROMOTION_STATUS: Record<
-  string,
-  { label: string; icon: string; bar?: string; text?: string }
+// Promote state shown as a banner/label on each product card — the same
+// states the product page button walks through (lib/promotion.ts).
+// REQUEST shows no banner; tapping the card opens the product page.
+const PROMOTION_STATUS: Partial<
+  Record<
+    PromoteState["kind"],
+    { label: string; icon: string; bar?: string; text?: string }
+  >
 > = {
   APPROVED: { label: "Promoting", icon: "", text: "text-teal-600" },
-  PENDING: { label: "Pending", icon: "", text: "text-orange-500" },
-  REJECTED: { label: "Not approved", icon: "✕", bar: "bg-red-500" },
+  PENDING: { label: "Waiting for Approval", icon: "", text: "text-orange-500" },
+  REJECTED: { label: "Not Approved", icon: "✕", bar: "bg-red-500" },
+  FULL: { label: "Full", icon: "", bar: "bg-ink-400" },
 };
 
 // Fixed ETB price buckets — only those with matching products are shown,
@@ -137,11 +132,9 @@ function PriceRangeSlider({
 
 export function CatalogClient({
   products: allProducts,
-  creatorSlug,
   kpis,
 }: {
   products: CatalogProduct[];
-  creatorSlug: string;
   kpis: { totalProducts: number };
 }) {
   const router = useRouter();
@@ -185,24 +178,6 @@ export function CatalogClient({
   const [priceBucket, setPriceBucket] = useState<string>("ALL");
   const [range, setRange] = useState<[number, number]>([priceMin, priceMax]);
   const [filtersOpen, setFiltersOpen] = useState(false);
-
-  // Apply / status state.
-  const [applyingId, setApplyingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [previewId, setPreviewId] = useState<string | null>(null);
-
-  // Opens straight to a product's preview when arriving from the
-  // sidebar search (/creator/products?product=<id>). Adjusted during
-  // render (React's recommended pattern for syncing state from a
-  // changing prop) rather than in an effect, so a second search while
-  // already on this page still reopens the drawer.
-  const searchParams = useSearchParams();
-  const productParam = searchParams.get("product");
-  const [syncedProductParam, setSyncedProductParam] = useState(productParam);
-  if (productParam !== syncedProductParam) {
-    setSyncedProductParam(productParam);
-    if (productParam) setPreviewId(productParam);
-  }
 
   function toggleSetValue(
     setter: React.Dispatch<React.SetStateAction<Set<string>>>,
@@ -265,37 +240,10 @@ export function CatalogClient({
     });
   }, [allProducts, query, selectedCategories, selectedSizes, range]);
 
-  const previewProduct = previewId
-    ? allProducts.find((product) => product.id === previewId)
-    : undefined;
-
   const activeFilterCount =
     selectedCategories.size +
     selectedSizes.size +
     (priceBucket !== "ALL" ? 1 : 0);
-
-  async function apply(productId: string) {
-    setApplyingId(productId);
-    setError(null);
-    try {
-      const response = await fetch("/api/creator/applications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(
-          body?.error?.message ?? "Could not submit the application",
-        );
-      }
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setApplyingId(null);
-    }
-  }
 
   const sidebar = (
     <aside
@@ -461,8 +409,8 @@ export function CatalogClient({
                 </span>
               </p>
               <p className="text-sm font-semibold text-foreground">
-                Showing {products.length.toLocaleString()} of{" "}
-                {kpis.totalProducts.toLocaleString()} products
+                Showing {products.length.toLocaleString("en-US")} of{" "}
+                {kpis.totalProducts.toLocaleString("en-US")} products
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -490,20 +438,23 @@ export function CatalogClient({
             </div>
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
           {/* Product grid */}
           {products.length > 0 ? (
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
               {products.map((product) => {
-                const promo = product.applicationStatus
-                  ? PROMOTION_STATUS[product.applicationStatus]
-                  : null;
+                const promo = PROMOTION_STATUS[product.promoteKind] ?? null;
                 return (
                   <div
                     key={product.id}
+                    role="link"
+                    tabIndex={0}
                     className="group flex cursor-pointer flex-col overflow-hidden rounded-[14px] border border-border bg-card p-3 shadow-card transition-shadow hover:shadow-md"
-                    onClick={() => setPreviewId(product.id)}
+                    onClick={() => router.push(`/creator/products/${product.id}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        router.push(`/creator/products/${product.id}`);
+                      }
+                    }}
                   >
                     {promo && promo.bar && (
                       <div
@@ -543,27 +494,18 @@ export function CatalogClient({
                     </h3>
                     <div className="mt-2 flex items-baseline justify-between gap-2">
                       <p className="text-sm font-bold text-foreground sm:text-base">
-                        ETB {product.priceBirr.toLocaleString()}
+                        ETB {product.priceBirr.toLocaleString("en-US")}
                       </p>
                       <p className="text-xs font-semibold text-teal-600 sm:text-sm">
-                        +ETB {product.commissionBirr.toLocaleString()}
+                        +ETB {product.commissionBirr.toLocaleString("en-US")}
                       </p>
                     </div>
-                    {product.applicationStatus === null && (
-                      <div
-                        className="mt-3"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <Button
-                          size="sm"
-                          className="h-8 w-full rounded-[8px]"
-                          disabled={applyingId === product.id}
-                          onClick={() => apply(product.id)}
-                        >
-                          {applyingId === product.id ? "Applying…" : "Apply"}
-                        </Button>
-                      </div>
-                    )}
+                    {product.promoteKind === "REQUEST" &&
+                    product.spotsLeft !== null ? (
+                      <p className="mt-2 text-xs text-ink-400">
+                        {product.spotsLeft} spots left
+                      </p>
+                    ) : null}
                   </div>
                 );
               })}
@@ -577,191 +519,6 @@ export function CatalogClient({
           )}
         </div>
       </div>
-
-      {previewProduct && (
-        <div className="fixed inset-0 z-50">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setPreviewId(null)}
-            aria-label="Close preview"
-          />
-          <aside
-            className={cn(
-              "absolute inset-x-0 bottom-0 max-h-[88vh] w-full overflow-y-auto rounded-t-[20px] border-t border-border bg-card shadow-card max-sm:animate-[sheet-up_0.3s_ease-out]",
-              "sm:inset-x-auto sm:top-0 sm:right-0 sm:h-full sm:max-h-none sm:max-w-[520px] sm:rounded-t-none sm:border-t-0 sm:border-l",
-            )}
-          >
-            <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-border sm:hidden" />
-            <div className="flex items-center justify-between border-b border-border px-6 py-4">
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Product preview
-                </p>
-                <p className="text-xs text-ink-400">Storefront view</p>
-              </div>
-              <button
-                type="button"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-[8px] border border-border text-ink-600"
-                onClick={() => setPreviewId(null)}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="px-6 py-6">
-              <div className="flex flex-col gap-4">
-                <div className="overflow-hidden rounded-[12px] border border-border">
-                  {previewProduct.imageUrls[0] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={previewProduct.imageUrls[0]}
-                      alt=""
-                      className="aspect-[4/3] w-full object-cover"
-                    />
-                  ) : (
-                    <div className="aspect-[4/3] w-full bg-teal-100" />
-                  )}
-                </div>
-                {previewProduct.imageUrls.length > 1 && (
-                  <div className="flex gap-2">
-                    {previewProduct.imageUrls.map((url) => (
-                      <div
-                        key={url}
-                        className="h-14 w-14 overflow-hidden rounded-[8px] border border-border"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={url}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-2">
-                  <p className="text-lg font-bold text-foreground">
-                    {previewProduct.name}
-                  </p>
-                  <p className="text-lg font-bold text-foreground">
-                    {previewProduct.commissionBirr.toLocaleString()} ETB
-                    <span className="ml-1.5 text-xs font-medium text-ink-400">
-                      commission
-                    </span>
-                  </p>
-                  {previewProduct.applicationStatus === "APPROVED" ? (
-                    <span className="w-fit rounded-pill bg-teal-100 px-2.5 py-1 text-xs font-medium text-teal-700">
-                      Approved · you earn on every completed order
-                    </span>
-                  ) : null}
-                  {previewProduct.description && (
-                    <ExpandableDescription html={previewProduct.description} />
-                  )}
-                  {previewProduct.applicationStatus === "APPROVED" &&
-                  previewProduct.affiliateLinkSlug ? (
-                    <CopyButton
-                      path={`/p/${creatorSlug}/${previewProduct.affiliateLinkSlug}`}
-                      className="mt-1 w-full"
-                    />
-                  ) : null}
-                </div>
-
-                {previewProduct.applicationStatus === null && (
-                  <Button
-                    disabled={applyingId === previewProduct.id}
-                    onClick={() => apply(previewProduct.id)}
-                    className="w-fit"
-                  >
-                    {applyingId === previewProduct.id
-                      ? "Applying…"
-                      : "Apply to earn commission"}
-                  </Button>
-                )}
-
-                {previewProduct.colors.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    <p className="text-xs font-semibold text-ink-600">Colors</p>
-                    <div className="flex items-center gap-2">
-                      {previewProduct.colors.map((color) => (
-                        <span
-                          key={color}
-                          className="h-4 w-4 rounded-full border border-border"
-                          title={color}
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {previewProduct.sizes.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    <p className="text-xs font-semibold text-ink-600">Size</p>
-                    <div className="flex flex-wrap gap-2">
-                      {previewProduct.sizes.map((size) => (
-                        <span
-                          key={size}
-                          className="rounded-[10px] border border-border px-2.5 py-1 text-xs font-semibold text-ink-600"
-                        >
-                          {size}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {previewProduct.features.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-teal-700">
-                      Features
-                    </p>
-                    <ul className="mt-2 list-disc pl-4 text-sm text-ink-600">
-                      {previewProduct.features.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {previewProduct.care.length > 0 && (
-                  <div className="border-t border-border pt-4">
-                    <p className="text-xs font-semibold text-teal-700">Care</p>
-                    <ul className="mt-2 list-disc pl-4 text-sm text-ink-600">
-                      {previewProduct.care.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {previewProduct.shipping.length > 0 && (
-                  <div className="border-t border-border pt-4">
-                    <p className="text-xs font-semibold text-teal-700">
-                      Shipping
-                    </p>
-                    <ul className="mt-2 list-disc pl-4 text-sm text-ink-600">
-                      {previewProduct.shipping.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {previewProduct.returns.length > 0 && (
-                  <div className="border-t border-border pt-4">
-                    <p className="text-xs font-semibold text-teal-700">
-                      Returns
-                    </p>
-                    <ul className="mt-2 list-disc pl-4 text-sm text-ink-600">
-                      {previewProduct.returns.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          </aside>
-        </div>
-      )}
     </div>
   );
 }

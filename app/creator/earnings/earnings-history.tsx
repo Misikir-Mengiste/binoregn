@@ -4,10 +4,11 @@ import { useMemo, useState } from "react";
 import { ArrowUpRight, BadgeDollarSign, Search } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/format";
 
 export type HistoryItem = {
   id: string;
-  kind: "COMMISSION" | "WITHDRAWAL";
+  kind: "COMMISSION" | "PAYOUT";
   title: string;
   subtitle: string;
   status: string;
@@ -19,7 +20,7 @@ export type HistoryItem = {
 const FILTERS = [
   { value: "ALL", label: "All activity" },
   { value: "COMMISSION", label: "Earnings" },
-  { value: "WITHDRAWAL", label: "Withdrawals" },
+  { value: "PAYOUT", label: "Payouts" },
 ] as const;
 
 export function EarningsHistory({ items }: { items: HistoryItem[] }) {
@@ -93,7 +94,7 @@ export function EarningsHistory({ items }: { items: HistoryItem[] }) {
                       {item.title}
                     </p>
                     <p className="truncate text-xs text-ink-400">
-                      {item.subtitle} · {new Date(item.at).toLocaleDateString()}
+                      {item.subtitle} · {formatDate(item.at)}
                     </p>
                   </div>
                 </div>
@@ -109,7 +110,7 @@ export function EarningsHistory({ items }: { items: HistoryItem[] }) {
                   >
                     {item.direction === "in" && "+"}
                     {item.direction === "out" && "−"}
-                    {item.amountBirr.toLocaleString()} ETB
+                    {item.amountBirr.toLocaleString("en-US")} ETB
                   </span>
                 </div>
               </div>

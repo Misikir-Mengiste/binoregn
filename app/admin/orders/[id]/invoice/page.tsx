@@ -2,16 +2,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
-import { BrandMark } from "@/components/logo";
+import { Logo } from "@/components/logo";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { InvoiceActions } from "./invoice-actions";
+import { orderNumber } from "@/lib/order-number";
+import { orderTotalBirr } from "@/lib/discount";
+import { requireAdminPage } from "@/lib/auth-helpers";
 
 export default async function AdminOrderInvoicePage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdminPage();
   const { id } = await params;
 
   const order = await prisma.order.findUnique({
@@ -24,6 +28,8 @@ export default async function AdminOrderInvoicePage({
       buyerCity: true,
       buyerEmail: true,
       quantity: true,
+      discountBirr: true,
+      discountCode: true,
       color: true,
       size: true,
       createdAt: true,
@@ -44,17 +50,23 @@ export default async function AdminOrderInvoicePage({
   }
 
   const subtotal = order.product.priceBirr * order.quantity;
+  const total = orderTotalBirr({
+    priceBirr: order.product.priceBirr,
+    quantity: order.quantity,
+    discountBirr: order.discountBirr,
+  });
   const formattedDate = new Date(order.createdAt).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "Africa/Addis_Ababa",
   });
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Invoice"
-        description={`Order #${order.id.slice(0, 10)}`}
+        description={`Order #${orderNumber(order.id)}`}
         breadcrumbs={[
           { label: "Orders List", href: "/admin/orders" },
           { label: "Invoice" },
@@ -77,14 +89,9 @@ export default async function AdminOrderInvoicePage({
 
       <section className="rounded-[16px] border border-border bg-card p-6 shadow-card print:border-transparent print:shadow-none sm:p-8">
         <div className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-center gap-3">
-            <BrandMark className="h-11 w-11 text-base" />
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                Binoregn
-              </p>
-              <p className="text-xs text-ink-400">Order invoice</p>
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <Logo className="h-7" />
+            <p className="text-xs text-ink-400">Order invoice</p>
           </div>
           <div className="text-sm text-ink-600">
             <p>
@@ -140,7 +147,7 @@ export default async function AdminOrderInvoicePage({
               ) : null}
               <p>
                 <span className="font-semibold text-foreground">Unit price</span>{" "}
-                {order.product.priceBirr.toLocaleString()} ETB
+                {order.product.priceBirr.toLocaleString("en-US")} ETB
               </p>
               <p>
                 <span className="font-semibold text-foreground">Payment</span>{" "}
@@ -191,10 +198,10 @@ export default async function AdminOrderInvoicePage({
                   </td>
                   <td className="px-4 py-4 text-ink-600">{order.quantity}</td>
                   <td className="px-4 py-4 text-right text-ink-600">
-                    {order.product.priceBirr.toLocaleString()} ETB
+                    {order.product.priceBirr.toLocaleString("en-US")} ETB
                   </td>
                   <td className="px-4 py-4 text-right font-semibold text-foreground">
-                    {subtotal.toLocaleString()} ETB
+                    {subtotal.toLocaleString("en-US")} ETB
                   </td>
                 </tr>
               </tbody>
@@ -205,15 +212,21 @@ export default async function AdminOrderInvoicePage({
             <div className="w-full max-w-xs space-y-3 rounded-[12px] border border-border bg-surface-100 p-4 text-sm">
               <div className="flex items-center justify-between text-ink-600">
                 <span>Subtotal</span>
-                <span>{subtotal.toLocaleString()} ETB</span>
+                <span>{subtotal.toLocaleString("en-US")} ETB</span>
               </div>
+              {order.discountBirr > 0 ? (
+                <div className="flex items-center justify-between text-ink-600">
+                  <span>Discount{order.discountCode ? ` (${order.discountCode})` : ""}</span>
+                  <span>−{order.discountBirr.toLocaleString("en-US")} ETB</span>
+                </div>
+              ) : null}
               <div className="flex items-center justify-between text-ink-600">
                 <span>Delivery</span>
                 <span>0 ETB</span>
               </div>
               <div className="flex items-center justify-between border-t border-border pt-3 font-semibold text-foreground">
                 <span>Total</span>
-                <span>{subtotal.toLocaleString()} ETB</span>
+                <span>{total.toLocaleString("en-US")} ETB</span>
               </div>
             </div>
           </div>

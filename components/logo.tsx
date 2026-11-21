@@ -1,15 +1,24 @@
 import { cn } from "@/lib/utils";
 
-// Official Binoregn wordmark (the exact brand PNG in public/). Height-based
-// sizing keeps the ~2.9:1 aspect ratio; pass e.g. "h-8" via className. The
-// artwork is dark charcoal + teal accents, so it's meant for LIGHT
-// backgrounds — on dark surfaces use the BrandMark + Wordmark text lockup.
-export function Logo({ className }: { className?: string }) {
+// Official Binoregn wordmark. public/brand/logo.png is the brand artwork
+// (public/binoregn-logo.png) trimmed to the letters and scaled to 600px
+// wide (~11 KB instead of 159 KB — it's on every page). Aspect ≈ 4.6:1;
+// size by height, e.g. "h-6". variant="white" has white lettering and
+// light-green dots for green/dark backgrounds.
+export function Logo({
+  className,
+  variant = "dark",
+}: {
+  className?: string;
+  variant?: "dark" | "white";
+}) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/binoregn-logo.png"
+      src={variant === "white" ? "/brand/logo-white.png" : "/brand/logo.png"}
       alt="Binoregn"
+      width={600}
+      height={131}
       className={cn("w-auto object-contain", className)}
     />
   );

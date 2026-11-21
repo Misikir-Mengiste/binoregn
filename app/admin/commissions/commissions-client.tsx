@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { TableToolbar } from "@/components/table-toolbar";
 import { Pagination } from "@/components/pagination";
 import { InitialsAvatar } from "@/components/initials-avatar";
 import { DeleteButton } from "@/components/delete-button";
+import { orderNumber } from "@/lib/order-number";
+import { shortProductName } from "@/lib/short-name";
+import { formatDate } from "@/lib/format";
 
 type CommissionRow = {
   id: string;
@@ -60,8 +62,6 @@ export function CommissionsClient({
   commissions: CommissionRow[];
 }) {
   const router = useRouter();
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
   const [page, setPage] = useState(1);
@@ -81,27 +81,6 @@ export function CommissionsClient({
 
   const pageCount = Math.max(1, Math.ceil(commissions.length / PAGE_SIZE));
   const pageItems = commissions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  async function markPaid(id: string) {
-    setPendingId(id);
-    setError(null);
-    try {
-      const response = await fetch(`/api/admin/commissions/${id}/pay`, {
-        method: "PATCH",
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(
-          body?.error?.message ?? "Could not mark the commission paid",
-        );
-      }
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setPendingId(null);
-    }
-  }
 
   async function deleteCommission(id: string) {
     const response = await fetch(`/api/admin/commissions/${id}`, {
@@ -134,9 +113,6 @@ export function CommissionsClient({
           { value: "PAID", label: "Paid" },
         ]}
       />
-      {error && (
-        <p className="px-5 pt-3 text-sm text-destructive">{error}</p>
-      )}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-[13.5px]">
           <thead>
@@ -154,10 +130,10 @@ export function CommissionsClient({
               <tr key={commission.id} className="border-t border-border">
                 <td className="px-5 py-3.5">
                   <p className="font-semibold text-foreground">
-                    {commission.order.product.name}
+                    <span title={commission.order.product.name}>{shortProductName(commission.order.product.name)}</span>
                   </p>
                   <p className="text-xs text-ink-400">
-                    Order #{commission.order.id.slice(0, 8)}
+                    Order #{orderNumber(commission.order.id)}
                   </p>
                 </td>
                 <td className="px-5 py-3.5">
@@ -181,10 +157,10 @@ export function CommissionsClient({
                 </td>
                 <td className="px-5 py-3.5">
                   <p className="font-semibold text-foreground">
-                    {commission.amountBirr.toLocaleString()} ETB
+                    {commission.amountBirr.toLocaleString("en-US")} ETB
                   </p>
                   <p className="text-xs text-ink-400">
-                    {new Date(commission.createdAt).toLocaleDateString()}
+                    {formatDate(commission.createdAt)}
                   </p>
                 </td>
                 <td className="px-5 py-3.5">
@@ -192,19 +168,16 @@ export function CommissionsClient({
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-2">
+                    {/* Pending commissions are paid in the Friday payout
+                        (/admin/payouts), never one by one. */}
                     {commission.status === "PENDING" ? (
-                      <Button
-                        size="sm"
-                        className="h-8 rounded-[8px]"
-                        disabled={pendingId === commission.id}
-                        onClick={() => markPaid(commission.id)}
-                      >
-                        Mark paid
-                      </Button>
+                      <span className="text-xs text-muted-foreground">
+                        Paid on Friday
+                      </span>
                     ) : (
                       <span className="text-xs text-muted-foreground">
                         {commission.paidAt
-                          ? new Date(commission.paidAt).toLocaleDateString()
+                          ? formatDate(commission.paidAt)
                           : "Paid"}
                       </span>
                     )}

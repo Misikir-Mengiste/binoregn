@@ -21,7 +21,7 @@ export function CreatorShell({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-surface-100">
+    <div className="min-h-screen bg-white">
       <div className="flex min-h-screen">
         <div className="hidden lg:flex">
           <CreatorSidebar email={email} />
@@ -38,12 +38,15 @@ export function CreatorShell({
               >
                 <Menu className="h-4 w-4" />
               </Button>
-              <Logo className="h-7" />
+              <Logo className="h-5" />
             </div>
             <div className="hidden lg:block" />
             <NotificationsBell notifications={notifications} />
           </header>
-          <div className="px-4 py-5 sm:px-6 lg:px-8 lg:py-7">{children}</div>
+          <div className="px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+            {/* Capped width so pages don't stretch edge to edge on wide screens. */}
+            <div className="mx-auto w-full max-w-[1120px]">{children}</div>
+          </div>
         </div>
       </div>
 

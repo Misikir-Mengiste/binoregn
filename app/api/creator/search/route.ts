@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
   const items: SidebarSearchItem[] = [
     ...products.map((product) => ({
-      href: `/creator/products?product=${product.id}`,
+      href: `/creator/products/${product.id}`,
       label: product.name,
       group: "Products",
     })),

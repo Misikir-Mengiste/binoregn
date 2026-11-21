@@ -10,15 +10,15 @@
 | Database     | Prisma + PostgreSQL                                | Source of truth for products, creators, applications, affiliate links, orders, and commissions |
 | File storage | Local filesystem (`public/uploads/`)                | Product images uploaded by admin; DB stores `/uploads/...` paths only |
 | Cache        | None (MVP)                                         | No Redis or application cache layer; read from PostgreSQL directly |
-| Background   | None (MVP)                                         | No queues, workers, webhooks, or scheduled jobs |
+| Background   | One scheduled call (server cron → `GET /api/cron/payout-reminder`, Fridays) + Telegram Bot API | Friday payout reminder to admin; Telegram messages are sent inline during requests, best-effort. No queues or workers |
 
 ## System Boundaries
 
 | Path / area        | Owns | Must not |
 | ------------------ | ---- | -------- |
-| `app/(public)/p/[creator]/[slug]` | Creator-attributed product landing page + no-payment checkout (built 2026-07-19) | Require buyer auth; mutate commission state; edit products; render creator identity (we only use the username in the URL, not in-page) |
+| `app/(public)/r/[slug]` | Creator-attributed product landing page + no-payment checkout (built 2026-07-19; moved from `/p/[creator]/[slug]` 2026-11-10). `[slug]` is a 7-char base62 short code (`lib/affiliate-link-code.ts`) | Require buyer auth; mutate commission state; edit products; render creator identity (neither in-page nor in the URL) |
 | `app/creator`      | Creator dashboard: browse products, apply to promote, view own links and earnings | Access other creators’ data; create/edit products; approve applications; change order/commission status |
-| `app/admin`        | Admin dashboard: product CRUD, application approve/reject, order status (marking an order Delivered auto-creates its commission as Paid — see invariant 2) | Expose admin actions to creators; auto-trigger delivery itself (no logistics webhook/cron) |
+| `app/admin`        | Admin dashboard: product CRUD, application approve/reject, order status (marking an order Delivered creates its commission as Pending), Friday payouts (`app/admin/payouts`: live due list, Excel export, mark paid) | Expose admin actions to creators; auto-trigger delivery itself (no logistics webhook/cron) |
 | `app/sign-in`      | Shared sign-in entry (email OTP two-step, Google) for both creator and admin — not auth-gated itself | Contain role-specific dashboard UI |
 | `app/sign-up`      | Redirect into creator onboarding after sign-in | Create an `ADMIN` account |
 | `app/dashboard`    | Single role-aware redirect after any sign-in method | Render any UI of its own |
@@ -38,6 +38,16 @@
 | **Cache** | Nothing in MVP | Do not introduce a cache for auth, commissions, or inventory without updating this file |
 
 **Entities (relational source of truth):** Product, Creator, Application, AffiliateLink, Order, Commission. Implemented in `prisma/schema.prisma` — see that file's comments for field-level decisions not spelled out here (e.g. "Creator" and "Admin" are both a single `User` model distinguished by `role`, since NextAuth needs one identity model regardless of role; `Commission`'s "None" status is realized as "no row exists yet" rather than a stored enum value).
+
+**Link views (`AffiliateLink.viewCount`)** count at most once per visitor per 24h. The `/r/[slug]` page reports a view from the browser (`LinkViewBeacon`, so crawlers and link previews never count) to `POST /api/public/links/[slug]/view`, which identifies the visitor by a random id in the `bv` cookie and records the last counted time in `LinkVisit` (unique per link + visitor; atomic insert-or-update guarded by the 24h cutoff). Views are stats only — never commission-relevant.
+
+**Commission creation** (`lib/commission`) runs in one transaction: the commission row (unique per order) is inserted first, then stock is decremented atomically, so concurrent "Delivered" requests create one commission and deduct stock once. Once a commission exists, the order's fulfillment/delivery status and cash reconciliation are locked.
+
+**Display formatting:** numbers use `toLocaleString("en-US")` and dates `formatDate()` (`lib/format.ts`, Addis Ababa time) — never the device locale, so server HTML and phones render identical text (hydration).
+
+**Creator discount codes** (`lib/discount.ts`) — per product: `discountEnabled` switch, fixed `discountBirr` (< price) and `discountCode` (stored uppercase, matched case-insensitively). Buyers type the code at checkout; it is **never sent to the buyer's page** (only the amount, for the "Have a creator code? Save N ETB" hint) — approved creators see it on their product page. `POST /api/public/links/[slug]/discount` checks a code (yes/no + amount); `POST /api/public/orders` re-checks it and rejects invalid codes (400). The discount is taken **once per order** and snapshotted on `Order.discountBirr`/`discountCode`; every total uses `orderTotalBirr()` (price × qty − discount): admin orders list/CSV, order detail, invoice, creator revenue, GMV, admin email/Telegram, tracking page. Commission is always the full `commissionBirr`. Switching off keeps the saved code/amount.
+
+**Site settings (`SiteSetting`)** — one row (id `site`, `lib/site-settings.ts`) for settings admins edit in Settings. Today: `orderPhone` + `showOrderPhone`, the "Questions about your order?" number with a Call now (`tel:`) button on the buyer's order confirmation, between the order number and the tracking link. `POST /api/public/orders` returns it as `contactPhone` (null when hidden or unset; a read failure never fails the order). Edited via `PATCH /api/admin/site-settings`. With no row yet it falls back to `NEXT_PUBLIC_CONTACT_PHONE`.
 
 **Prisma 7 setup** — this project is on Prisma ORM 7, which moved the datasource connection out of `schema.prisma`:
 
@@ -182,7 +192,10 @@ invariant 4 (manual status transitions only) is unaffected.
 Creators complete a one-time onboarding form after their first
 sign-in. The profile is stored directly on `User` and includes:
 
-- `creatorUsername` (unique handle)
+- `creatorUsername` (unique handle; rules in `lib/username.ts`: starts
+  with a letter, letters and underscores, numbers only at the end, no
+  spaces; always saved lowercase. Set at onboarding only — Settings
+  doesn't validate or change it, so older usernames keep working)
 - `creatorPhone` (contact phone)
 - `creatorDisplayName`
 - `creatorPlatform` + `creatorProfileUrl`
@@ -193,17 +206,72 @@ sign-in. The profile is stored directly on `User` and includes:
 The onboarding submission also sets the payout fields listed above,
 so admins always see where to send commissions.
 
-## Creator Withdrawals
+## Friday Payouts
 
-Creators can request manual withdrawals from their **paid**
-commission balance. Each withdrawal has:
+Creator withdrawal requests were removed on 2026-11-11 (the
+`Withdrawal` table was dropped). Instead, the admin pays creators every
+Friday:
 
-- `amountBirr`
-- `payoutMethod` + snapshot payout details
-- `status` (`PENDING` → `APPROVED` or `REJECTED`)
+- A commission is created PENDING when its order is marked Delivered;
+  its `createdAt` is that moment.
+- The Friday payout covers PENDING commissions created by the most
+  recent Thursday 11:59:59.999 PM, Africa/Addis_Ababa (UTC+3, no DST).
+- Only creators whose covered total is ≥ 500 Birr
+  (`PAYOUT_MIN_BIRR`) are due; smaller totals stay PENDING and roll
+  over.
+- The due list is computed live (`lib/commission/payouts.ts`
+  `getDuePayouts`); nothing is stored until admin clicks "Mark paid".
+  That creates a `Payout` row (amount, cutoff, payout details
+  snapshot) and moves the covered commissions to PAID with
+  `payoutId`, in one transaction that refuses a double-submit.
+- Admin downloads the list as an Excel file
+  (`GET /api/admin/payouts/export`, exceljs). Telegram never sends it.
+- Creators see their next payout (amount + the Friday that is today or
+  ahead) on their earnings page; admin sees the latest passed cutoff,
+  i.e. what is payable now.
 
-Admins approve or reject withdrawals manually; creators see pending
-requests and the remaining balance after withdrawals.
+## Notifications and Telegram
+
+- **Creator notifications** are stored in `Notification` (one row per
+  creator per event; `readAt` for the bell) **and emailed** to the
+  creator's account email (every creator, no opt-in; creators get no
+  Telegram). Bell + email events: profile approved/rejected, product
+  request approved/rejected, order delivered (one message that also
+  covers "commission added"), commission paid (Friday payout), admin
+  announcements (`Announcement` fans out one Notification + email per
+  approved, active creator), and product paused / available again
+  (`PRODUCT_PAUSED`/`PRODUCT_RESUMED`: a product a creator has a link to
+  goes unpublished or out of stock, or comes back — from the admin
+  product edit or a delivery that uses the last unit). Email-only:
+  application received (onboarding submitted), payout details changed
+  (security alert, `lib/payout-change-alert.ts`; not on first setup),
+  account deactivated. Written by `lib/notifications.ts` after the
+  triggering write succeeds; never throws, never blocks the action —
+  emails go out after the response (`after()`), via `sendCreatorEmail`
+  in `lib/mailer.ts` (one branded HTML + text layout; links use
+  `APP_URL`, else `AUTH_URL`). No SMTP configured = emails skipped.
+- **Admin alerts** go to Telegram only (the admin bell stays a derived
+  action queue): new order, new creator signup, new product request,
+  low stock (≤ `LOW_STOCK_THRESHOLD` = 5) / out of stock after a
+  delivery, and the Friday payout reminder.
+- **Linking**: `User.telegramChatId` / `telegramLinkToken`. Settings →
+  Connect Telegram → `POST /api/telegram/link` returns a one-time
+  `t.me/<bot>?start=<token>` deep link; the bot webhook
+  (`POST /api/telegram/webhook`, verified by
+  `TELEGRAM_WEBHOOK_SECRET`) swaps the token for the chat id. Private
+  chats only; one chat ↔ one account; `/stop` or a 403 from Telegram
+  unlinks. Works the same for admins.
+- **Friday reminder**: `GET /api/cron/payout-reminder` (Bearer
+  `CRON_SECRET`) sends "Payout day: N creators · X Birr" only on a
+  Friday in Addis Ababa and only when someone reached the minimum. It
+  never records or changes payouts. Schedule it with the server's cron
+  (example in the route file). Telegram never sends the Excel file.
+- Env: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`,
+  `TELEGRAM_WEBHOOK_SECRET`, `CRON_SECRET`. With no bot token,
+  everything Telegram is a silent no-op.
+- **Creator profile status** now has `REJECTED` (admin Reject on the
+  creators pages); rejected creators see "Profile not approved" with
+  contact details on `/onboarding/pending`.
 
 ## Auth and Access Model
 
@@ -211,7 +279,7 @@ requests and the remaining balance after withdrawals.
 | ----- | --------------------- | ---------------- |
 | Buyer | No account | View creator-attributed product page; place no-payment order; optionally receive tracking link via email |
 | Creator | Google OAuth or email + 6-digit OTP (passwordless) | Browse catalog; apply to promote; view/copy own approved links; view own earnings (after admin approves the onboarding profile) |
-| Admin | Single fixed/seeded identity (not creator self-signup) | Product CRUD + image upload; approve/reject applications; set order status (Delivered auto-pays the commission); mark commissions Paid (only needed for pre-2026-07-29 Pending rows) |
+| Admin | Single fixed/seeded identity (not creator self-signup) | Product CRUD + image upload; approve/reject applications; set order status (Delivered creates a Pending commission); record Friday payouts (marks the covered commissions Paid) |
 
 Ownership rules:
 
@@ -223,7 +291,7 @@ Ownership rules:
 
 ## AI and Background Task Model
 
-Not used in the MVP.
+No AI. The only scheduled work is the Friday payout reminder (see Notifications and Telegram); it only reads and sends a message.
 
 - Do not add AI generation, embedding, or agent pipelines.
 - Do not add background workers, job queues, payment webhooks, or logistics webhooks.
@@ -231,10 +299,11 @@ Not used in the MVP.
 
 ## Invariants
 
+- **Every `app/admin` page calls `requireAdminPage()` first** (`lib/auth-helpers.ts`). Next.js renders a page in parallel with its layout, so the layout's role check alone still let admin pages run their queries and ship the data (buyer names/phones) inside the response to a signed-in creator (found 2026-11-21). Non-admins are redirected before anything is read; the layout redirects too.
 The codebase must never violate these rules:
 
 1. **Admin-only catalog writes** — Only the admin can create or edit products. Creators never have write access to the product catalog.
-2. **Forward-only commission lifecycle** — Commission status moves only None → Paid; there is no standalone Pending state a new commission passes through. The Commission row (status Paid, `paidAt` set) is created the moment an order is marked Delivered (decided 2026-07-29, superseding the earlier Delivered→Pending→admin-Paid flow — admin wants delivery to auto-pay the creator rather than requiring a separate "Mark Paid" step). `cashReconciledAt` is auto-set at the same time if it wasn't already (decided 2026-07-28, superseding an even earlier Delivered+cash-reconciled two-step trigger). Cancelled or Returned orders never produce a commission. Pre-existing Pending commissions from before 2026-07-29 can still be moved to Paid via the admin "Mark Paid" action (`lib/commission`'s `markCommissionPaid`), but no new commission is ever created Pending. Note: no money actually moves through the app (no payment gateway — invariant 4); "Paid" records that the admin's offline payout is considered settled at delivery, not that a transaction was processed.
+2. **Forward-only commission lifecycle** — Commission status moves only None → Pending → Paid. The Commission row is created PENDING the moment an order is marked Delivered (decided 2026-11-11, reversing the 2026-07-29 auto-Paid rule); `cashReconciledAt` is auto-set at the same time if it wasn't already. It becomes Paid only through a Friday payout (`lib/commission/payouts.ts` `markPayoutPaid`) — there is no per-commission "Mark Paid". Cancelled or Returned orders never produce a commission. No money moves through the app (no payment gateway — invariant 4); "Paid" records the admin's offline payout.
 3. **Approval before link** — An affiliate link is generated only after admin approval of that creator+product application — never before approval, and never for a rejected application.
 4. **Manual status transitions only** — Order and commission status changes are explicit admin actions. No payment gateway, logistics webhook, or cron job may trigger them in this MVP.
 5. **Immutable order attribution** — Creator attribution on an order is set at checkout and never reassigned afterward.
@@ -242,5 +311,5 @@ The codebase must never violate these rules:
 7. **Separate order and commission status** — Order status and commission status are distinct fields (and distinct UI badges). Do not collapse them into one status.
 8. **No buyer accounts** — Buyers checkout without accounts; this part is unchanged. Creators sign in via OTP or Google only.
 9. **Creator dashboard gated by admin approval** — after onboarding, creators see a pending state until an admin marks the profile approved.
-10. **Withdrawals require admin approval** — a withdrawal request is always pending until an admin approves or rejects it.
+10. **Payouts are recorded by admin** — creators can't request money; the admin pays the Friday list offline and records it. A payout only ever covers commissions from before a cutoff that has already passed, and each commission is paid at most once.
 11. **Order fulfillment steps are explicit** — admin updates order progress through Placed → Processing → Shipped → Delivered; delivery status still drives commission creation.

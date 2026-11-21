@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse, type NextRequest } from "next/server";
+import sharp from "sharp";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireAdmin } from "@/lib/auth-helpers";
 
@@ -14,13 +15,37 @@ import { requireAdmin } from "@/lib/auth-helpers";
 // filesystem is available.
 export const runtime = "nodejs";
 
-const MAX_BYTES = 5 * 1024 * 1024; // 5MB
+// Raw upload limit. Photos are compressed below (typically to a few
+// hundred KB), so full-size phone photos are fine to accept.
+const MAX_BYTES = 15 * 1024 * 1024; // 15MB
 const EXTENSION: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
   "image/gif": "gif",
 };
+
+// Fast pages on slow mobile connections (progress-tracker 2026-11-11):
+// every still image is auto-rotated (phone EXIF), shrunk to fit
+// 1600×1600 and re-encoded as WebP. GIFs are kept as-is so animation
+// survives.
+const MAX_DIMENSION = 1600;
+const WEBP_QUALITY = 80;
+
+async function compress(bytes: Buffer, type: string) {
+  if (type === "image/gif") return { bytes, extension: "gif" };
+  const output = await sharp(bytes)
+    .rotate()
+    .resize({
+      width: MAX_DIMENSION,
+      height: MAX_DIMENSION,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: WEBP_QUALITY })
+    .toBuffer();
+  return { bytes: output, extension: "webp" };
+}
 
 export async function POST(request: NextRequest) {
   const authed = await requireAdmin();
@@ -37,14 +62,21 @@ export async function POST(request: NextRequest) {
     return apiError("Only JPG, PNG, WEBP, or GIF images are allowed", 400);
   }
   if (file.size > MAX_BYTES) {
-    return apiError("Image must be 5MB or smaller", 400);
+    return apiError("Image must be 15MB or smaller", 400);
   }
 
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const filename = `${Date.now()}-${randomUUID().slice(0, 8)}.${extension}`;
+  let compressed;
+  try {
+    compressed = await compress(Buffer.from(await file.arrayBuffer()), file.type);
+  } catch {
+    // sharp couldn't decode it — the file isn't really the image type
+    // its Content-Type claims.
+    return apiError("That file couldn't be read as an image", 400);
+  }
+  const filename = `${Date.now()}-${randomUUID().slice(0, 8)}.${compressed.extension}`;
   const dir = path.join(process.cwd(), "public", "uploads");
   await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, filename), bytes);
+  await writeFile(path.join(dir, filename), compressed.bytes);
 
   return apiSuccess({ url: `/api/uploads/${filename}` });
 }

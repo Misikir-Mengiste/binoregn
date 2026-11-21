@@ -4,6 +4,7 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { updateFulfillmentStatusSchema } from "@/lib/validations/order-status";
 import { maybeCreateCommission, orderHasCommission } from "@/lib/commission";
+import { afterOrderDelivered } from "@/lib/order-events";
 
 export async function PATCH(
   request: NextRequest,
@@ -31,9 +32,12 @@ export async function PATCH(
     return apiError("Order not found", 404);
   }
 
-  if (parsed.data.status === "DELIVERED" && (await orderHasCommission(id))) {
+  // A delivered order with a commission is final: moving it back to
+  // processing/shipped would leave a paid-out-able commission on an
+  // order that no longer reads as delivered.
+  if (await orderHasCommission(id)) {
     return apiError(
-      "Delivery status is locked once a commission exists for this order",
+      "This order is delivered and its commission is created — its status can't change",
       409,
     );
   }
@@ -50,7 +54,7 @@ export async function PATCH(
   });
 
   if (parsed.data.status === "DELIVERED") {
-    await maybeCreateCommission(id);
+    if (await maybeCreateCommission(id)) await afterOrderDelivered(id);
   }
 
   return apiSuccess(updated);

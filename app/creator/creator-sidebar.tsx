@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   ChevronDown,
+  ChevronRight,
   ClipboardCheck,
   LayoutDashboard,
   Link2,
@@ -46,9 +47,9 @@ export function CreatorSidebar({
   const displayName = email.split("@")[0] || "Creator";
 
   return (
-    <nav className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col border-r border-border bg-card">
+    <nav className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col border-r border-border bg-surface-50">
       <div className="flex items-center gap-2.5 px-5 pt-6 pb-5">
-        <Logo className="h-10" />
+        <Logo className="h-6" />
       </div>
 
       <div className="px-4 pb-5">
@@ -71,8 +72,8 @@ export function CreatorSidebar({
                   href={item.href}
                   onClick={onNavigate}
                   className={cn(
-                    "flex items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-600 transition-colors hover:bg-surface-100",
-                    active && "bg-surface-100 font-semibold text-teal-600",
+                    "flex items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-600 transition-colors hover:bg-white",
+                    active && "bg-white font-semibold text-teal-600 shadow-[0_1px_2px_rgba(7,7,7,0.06)] ring-1 ring-border",
                   )}
                 >
                   <Icon
@@ -97,7 +98,7 @@ export function CreatorSidebar({
               href="/creator/settings"
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-600 transition-colors hover:bg-surface-100",
+                "flex items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-600 transition-colors hover:bg-white",
                 pathname.startsWith("/creator/settings") &&
                   "bg-surface-100 font-semibold text-teal-600",
               )}
@@ -118,9 +119,9 @@ export function CreatorSidebar({
                 onNavigate?.();
                 signOut({ callbackUrl: "/sign-in" });
               }}
-              className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-600 transition-colors hover:bg-surface-100"
+              className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2.5 text-[13.5px] font-medium text-ink-600 transition-colors hover:bg-white"
             >
-              <Settings className="h-4 w-4 text-ink-400" />
+              <ChevronRight className="h-4 w-4 text-ink-400" />
               Sign out
             </button>
           </li>
@@ -131,7 +132,7 @@ export function CreatorSidebar({
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/sign-in" })}
-          className="flex w-full items-center gap-3 rounded-[8px] p-1 text-left transition-colors hover:bg-surface-100"
+          className="flex w-full items-center gap-3 rounded-[8px] p-1 text-left transition-colors hover:bg-white"
         >
           <InitialsAvatar email={email} size="sm" />
           <div className="min-w-0 flex-1">

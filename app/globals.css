@@ -34,6 +34,7 @@
   --color-coral-500: var(--coral-500);
   --color-coral-100: var(--coral-100);
   --color-mint-500: var(--mint-500);
+  --color-mint-200: var(--mint-200);
   --color-mint-100: var(--mint-100);
   --color-peach-100: var(--peach-100);
   --color-peach-700: var(--peach-700);
@@ -44,6 +45,7 @@
   --color-ink-600: var(--ink-600);
   --color-ink-400: var(--ink-400);
   --color-surface-0: var(--surface-0);
+  --color-surface-50: var(--surface-50);
   --color-surface-100: var(--surface-100);
 
   /* Legacy aliases → teal (older class names keep working) */
@@ -61,29 +63,40 @@
 
   --shadow-card: var(--shadow-card);
   --shadow-hover: var(--shadow-hover);
+
+  /* Brand type uses Regular / Medium / Semibold (no Bold), so every
+     font-bold renders as Semibold. */
+  --font-weight-bold: 600;
 }
 
 :root {
-  /* Brand palette — context/design-system.md */
-  --teal-600: #00a389;
-  --teal-700: #008f78;
-  --teal-500: #2eb6a1;
-  --teal-100: #e6f7f4;
-  --coral-500: #f14c4c;
-  --coral-100: #fde7e7;
-  --mint-500: #3bb273;
-  --mint-100: #e1f6e9;
-  --peach-100: #fdeedc;
-  --peach-700: #b8620a;
-  --orange-500: #f5a524;
-  --blue-100: #e8f1fb;
-  --blue-700: #2f6fed;
-  --ink-900: #1e1b2e;
-  --ink-600: #5a5770;
-  --ink-400: #9a97ac;
+  /* Brand palette — context/design-system.md (brand sheet 2026-11-11:
+     #0CB587 green, #E4F5FF light blue, #B9EEBA light green, #070707
+     black, #B2B50C olive, #B5200C red). Token names are kept from the
+     earlier palette so existing classes pick the brand up everywhere;
+     shades marked "derived" are darker/lighter steps for hover states
+     and readable small text. */
+  --teal-600: #0cb587; /* brand green — primary */
+  --teal-700: #09996f; /* derived: hover / text on tints */
+  --teal-500: #3cc89f; /* derived */
+  --teal-100: #e3f7ef; /* derived tint */
+  --coral-500: #b5200c; /* brand red — errors, rejected */
+  --coral-100: #fbe6e2; /* derived tint */
+  --mint-500: #0e8f55; /* derived: readable success text */
+  --mint-200: #b9eeba; /* brand light green — accents */
+  --mint-100: #e6f9e6; /* derived tint of #B9EEBA */
+  --peach-100: #f4f5d4; /* derived tint of olive */
+  --peach-700: #6c6e06; /* derived: readable olive text */
+  --orange-500: #a2a50a; /* brand olive #B2B50C, a step darker for text */
+  --blue-100: #e4f5ff; /* brand light blue */
+  --blue-700: #1c6fa8; /* derived */
+  --ink-900: #070707; /* brand black */
+  --ink-600: #4a524e;
+  --ink-400: #8a928e;
   --surface-0: #ffffff;
-  --surface-100: #f4f7f6;
-  --border: #e5e9e8;
+  --surface-50: #f8f9fa; /* derived: dashboard sidebar / table header (reference design) */
+  --surface-100: #f1f9fd; /* page background, a lighter #E4F5FF */
+  --border: #e1ebef;
 
   /* Legacy aliases */
   --violet-600: var(--teal-600);
@@ -113,15 +126,17 @@
   --input: var(--border);
   --ring: var(--teal-500);
 
-  --font-sans: "Segoe UI", var(--font-inter), -apple-system, sans-serif;
+  /* Brand: Lufga (headings) & Inter. Lufga is a licensed font that isn't
+     in the project, so headings use Inter until its files are added. */
+  --font-sans: var(--font-inter), -apple-system, "Segoe UI", sans-serif;
 
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-pill: 999px;
-  --shadow-card: 0 1px 3px rgba(30, 27, 46, 0.06),
-    0 4px 16px rgba(30, 27, 46, 0.04);
-  --shadow-hover: 0 8px 24px rgba(30, 27, 46, 0.1);
+  --shadow-card: 0 1px 2px rgba(7, 7, 7, 0.04),
+    0 4px 16px rgba(12, 60, 50, 0.05);
+  --shadow-hover: 0 8px 24px rgba(12, 60, 50, 0.1);
 }
 
 @layer base {

@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
 import { CommissionsClient } from "./commissions-client";
+import { requireAdminPage } from "@/lib/auth-helpers";
 
 export default async function AdminCommissionsPage() {
+  await requireAdminPage();
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
@@ -66,7 +68,7 @@ export default async function AdminCommissionsPage() {
           },
           {
             label: "Pending count",
-            value: pendingAgg._count.toLocaleString(),
+            value: pendingAgg._count.toLocaleString("en-US"),
             icon: Hash,
             accent: "teal",
           },

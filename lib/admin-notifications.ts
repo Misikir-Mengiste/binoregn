@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { getDuePayouts, payoutCutoff, payoutDay } from "@/lib/commission/payouts";
 
-export type AdminNotificationType = "APPLICATION" | "CREATOR" | "WITHDRAWAL" | "ORDER";
+export type AdminNotificationType = "APPLICATION" | "CREATOR" | "PAYOUT" | "ORDER";
 
 export type AdminNotification = {
   id: string;
@@ -21,14 +22,15 @@ function creatorName(creator: {
 
 /**
  * Items waiting on an admin decision: new product applications, new
- * creator onboarding submissions, new withdrawal requests, and newly
- * placed orders. Unlike the creator-facing feed (which reports
+ * creator onboarding submissions, newly placed orders, and the current
+ * Friday payout once anyone is due. Unlike the creator-facing feed (which reports
  * decisions already made), this is an action queue: everything here
  * is still PENDING/PLACED, mirroring the "Pending" counts already
- * shown on the Applications/Creators/Withdrawals/Orders list pages.
+ * shown on the Applications/Creators/Orders/Payouts pages.
  */
 export async function getAdminNotifications(): Promise<AdminNotification[]> {
-  const [applications, creators, withdrawals, orders] = await Promise.all([
+  const cutoff = payoutCutoff();
+  const [applications, creators, duePayouts, orders] = await Promise.all([
     prisma.application.findMany({
       where: { status: "PENDING", deletedAt: null },
       orderBy: { createdAt: "desc" },
@@ -58,19 +60,7 @@ export async function getAdminNotifications(): Promise<AdminNotification[]> {
         email: true,
       },
     }),
-    prisma.withdrawal.findMany({
-      where: { status: "PENDING", deletedAt: null },
-      orderBy: { createdAt: "desc" },
-      take: 8,
-      select: {
-        id: true,
-        amountBirr: true,
-        createdAt: true,
-        creator: {
-          select: { creatorDisplayName: true, name: true, email: true },
-        },
-      },
-    }),
+    getDuePayouts(cutoff),
     prisma.order.findMany({
       where: { deliveryStatus: "PLACED", deletedAt: null },
       orderBy: { createdAt: "desc" },
@@ -109,14 +99,15 @@ export async function getAdminNotifications(): Promise<AdminNotification[]> {
     });
   }
 
-  for (const withdrawal of withdrawals) {
+  if (duePayouts.length > 0) {
+    const total = duePayouts.reduce((sum, row) => sum + row.amountBirr, 0);
     events.push({
-      id: `wd-${withdrawal.id}`,
-      type: "WITHDRAWAL",
-      title: "Withdrawal request",
-      detail: `${creatorName(withdrawal.creator)} requested ${withdrawal.amountBirr.toLocaleString()} ETB`,
-      at: withdrawal.createdAt,
-      href: "/admin/withdrawals",
+      id: `payout-${cutoff.toISOString()}`,
+      type: "PAYOUT",
+      title: "Payouts due",
+      detail: `${duePayouts.length} creator${duePayouts.length === 1 ? "" : "s"} · ${total.toLocaleString("en-US")} Birr`,
+      at: payoutDay(cutoff),
+      href: "/admin/payouts",
     });
   }
 

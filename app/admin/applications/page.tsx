@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
 import { ApplicationsClient } from "./applications-client";
+import { requireAdminPage } from "@/lib/auth-helpers";
 
 export default async function AdminApplicationsPage() {
+  await requireAdminPage();
   const [applications, pending, approved, rejected] = await Promise.all([
     prisma.application.findMany({
       orderBy: { createdAt: "desc" },
@@ -33,19 +35,19 @@ export default async function AdminApplicationsPage() {
         items={[
           {
             label: "Pending",
-            value: pending.toLocaleString(),
+            value: pending.toLocaleString("en-US"),
             icon: Clock,
             accent: "orange",
           },
           {
             label: "Approved",
-            value: approved.toLocaleString(),
+            value: approved.toLocaleString("en-US"),
             icon: CheckCircle2,
             accent: "mint",
           },
           {
             label: "Rejected",
-            value: rejected.toLocaleString(),
+            value: rejected.toLocaleString("en-US"),
             icon: XCircle,
             accent: "coral",
           },

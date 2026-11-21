@@ -3,6 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireCreator } from "@/lib/auth-helpers";
 import { createApplicationSchema } from "@/lib/validations/application";
+import { notifyAdminsTelegram } from "@/lib/telegram";
+import { escapeHtml } from "@/lib/notifications";
+import {
+  approvedCreatorCount,
+  requestAgainAt,
+  spotsLeft,
+} from "@/lib/promotion";
 
 export async function GET() {
   const authed = await requireCreator();
@@ -26,11 +33,11 @@ export async function GET() {
   return apiSuccess(applications);
 }
 
-// Applying twice to the same product is permanently blocked by the
-// schema's @@unique([creatorId, productId]) on Application — a
-// rejected creator can't currently re-apply. That's a deliberate
-// MVP simplification (doc/backend-api-plan.md Open Question 1),
-// not an oversight; revisit if it turns out to matter.
+// One Application row per creator+product (@@unique). A rejected
+// creator may request again REREQUEST_AFTER_DAYS after the decision —
+// the same row is reset to PENDING (createdAt = the new request time,
+// so it sorts as a fresh request for admin). A product whose creator
+// limit is reached can't be requested at all (lib/promotion.ts).
 export async function POST(request: NextRequest) {
   const authed = await requireCreator();
   if (authed instanceof NextResponse) return authed;
@@ -49,9 +56,11 @@ export async function POST(request: NextRequest) {
 
   const product = await prisma.product.findUnique({
     where: { id: parsed.data.productId },
-    select: { id: true },
+    select: { id: true, name: true, isPublished: true, stock: true, maxCreators: true },
   });
-  if (!product) {
+  // Same visibility rule as the creator catalog: hidden products can't
+  // be requested.
+  if (!product || !product.isPublished || product.stock <= 0) {
     return apiError("Product not found", 404);
   }
 
@@ -59,16 +68,51 @@ export async function POST(request: NextRequest) {
     where: {
       creatorId_productId: { creatorId: authed.id, productId: product.id },
     },
-    select: { id: true },
+    select: { id: true, status: true, decidedAt: true },
   });
-  if (existing) {
-    return apiError("Already applied to this product", 409);
+  if (existing?.status === "PENDING" || existing?.status === "APPROVED") {
+    return apiError("Already requested this product", 409);
+  }
+  if (existing?.status === "REJECTED" && existing.decidedAt) {
+    const againAt = requestAgainAt(existing.decidedAt);
+    if (againAt > new Date()) {
+      return apiError(
+        `You can request this product again on ${againAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Addis_Ababa" })}`,
+        409,
+      );
+    }
   }
 
-  const application = await prisma.application.create({
-    data: { creatorId: authed.id, productId: product.id },
+  const left = spotsLeft(product.maxCreators, await approvedCreatorCount(product.id));
+  if (left === 0) {
+    return apiError("This product is full — no promotion spots left", 409);
+  }
+
+  // Upsert, not create: an admin-deleted application is soft-deleted
+  // (lib/prisma.ts), so it's invisible to the findUnique above but its
+  // row still holds the creator+product unique key — reviving it as a
+  // fresh request is the only way that creator can ask again.
+  const application = await prisma.application.upsert({
+    where: {
+      creatorId_productId: { creatorId: authed.id, productId: product.id },
+    },
+    update: {
+      status: "PENDING",
+      decidedAt: null,
+      createdAt: new Date(),
+      deletedAt: null,
+    },
+    create: { creatorId: authed.id, productId: product.id },
     select: { id: true, status: true, createdAt: true },
   });
+
+  const requester = await prisma.user.findUnique({
+    where: { id: authed.id },
+    select: { creatorDisplayName: true, creatorUsername: true, email: true },
+  });
+  await notifyAdminsTelegram(
+    `📝 <b>New product request</b>\n${escapeHtml(requester?.creatorDisplayName || requester?.creatorUsername || requester?.email || "A creator")} wants to promote ${escapeHtml(product.name)}`,
+  );
 
   return apiSuccess(application, 201);
 }

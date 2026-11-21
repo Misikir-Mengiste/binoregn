@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { copyText } from "@/lib/clipboard";
 
 // Builds the absolute URL client-side from window.location.origin
 // rather than hardcoding a base URL, so it's correct in dev, any
@@ -20,27 +21,11 @@ export function CopyButton({
 
   async function handleCopy() {
     const url = `${window.location.origin}${path}`;
-    // navigator.clipboard is only available in secure contexts
-    // (https/localhost). On plain-http deployments it's undefined, so
-    // fall back to a hidden textarea + execCommand so copy still works.
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(url);
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = url;
-        textarea.setAttribute("readonly", "");
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-      }
+    // Shared fallback for plain-http pages (lib/clipboard.ts). If copying
+    // fails, leave the label alone so it doesn't lie.
+    if (await copyText(url)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Last resort: leave state unchanged so the label doesn't lie.
     }
   }
 

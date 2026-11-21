@@ -5,6 +5,500 @@ change.
 
 ## Current Phase
 
+- **2026-11-11 — Feature update list (user-supplied), decisions +
+  build order.** Source: the user's "update lists" brief. Decisions
+  confirmed with the user before any code:
+  1. **Creator product page** — creators see the same product design
+     buyers see, plus a commission badge ("You earn X Birr per
+     delivered sale"). No quantity / Buy Now; one button that walks
+     Request to Promote → Waiting for Approval → Copy Link + Share,
+     or Not Approved when rejected.
+  2. **Re-request** — a creator may request the same product again 7
+     days after a rejection (reuses the one Application row per
+     creator+product; `@@unique([creatorId, productId])` stays).
+  3. **Creator limit per product** — admin sets `maxCreators` per
+     product (empty = unlimited). Only APPROVED creators use a spot;
+     pending requests don't, but admin can't approve once full.
+     Creators see spots left; the button shows "Full" at 0.
+  4. **Order confirmation is on-screen only** with the order number.
+     The optional buyer email field and tracking email are removed.
+  5. **Payouts every Friday** replace creator withdrawal requests.
+     Delivered → commission PENDING again (reverses the 2026-07-29
+     auto-PAID decision). The Friday list covers PENDING commissions
+     created by Thursday 11:59 PM (Africa/Addis_Ababa, UTC+3), only
+     for creators whose eligible total is ≥ 500 Birr; smaller amounts
+     roll over. Admin downloads the list as an Excel file from the
+     dashboard and marks it paid. Not launched yet (confirmed), so
+     legacy test data is converted in a migration rather than
+     carried over with exact accounting.
+  6. **Notifications** — stored per creator (dashboard) and also sent
+     on Telegram: profile approved/rejected, product request
+     approved/rejected, order delivered, commission added, commission
+     paid, admin announcements. Admin Telegram bot alerts: new order,
+     new creator signup, new product request, low/out-of-stock, payouts
+     due. Friday Telegram reminder ("Payout day: N creators · X Birr")
+     only when someone reached 500 Birr; no daily summary. Telegram
+     never sends the Excel file.
+  7. **Trust/speed** — mobile-first, compressed images, "Cash on
+     delivery" clearly shown, visible contact info, HTTPS everywhere
+     (HTTPS itself is a server/proxy concern, not app code).
+  Background work (Telegram, Friday reminder) needs a scheduler —
+  this changes architecture.md's "Background: none"; updated in the
+  unit that adds it. Build order: (a) creator product page +
+  re-request + spot limit, (b) screen-only confirmation, (c) Friday
+  payouts + Excel + withdrawal removal, (d) stored notifications +
+  announcements, (e) Telegram bot, (f) image compression + trust
+  details.
+
+- **2026-11-12 — Orders table + dashboard background.** Orders table: Delivery and Payment columns replaced by one Fulfillment column (order stage pill); product names cut to 24 chars with the full name as a tooltip; even cell padding (20px edges, 12px between) via row-level classes; table min width 760px; responsive title/stat sizes. Admin + creator dashboards: white content area, sidebars on a new light-grey token `--surface-50` (#f8f9fa) with a white bordered active item and white hover (user reference). Shared PageHeader title 22px on phones, 28px from sm. Verified no horizontal overflow on every admin and creator page at 375/768/1280.
+
+- **2026-11-21 — Full health check + admin data-leak fix.** Scripted check
+  (99 checks, real sign-in flow as admin/creator/buyer, test data only):
+  auth, access control, every page, buyer order + discount, order
+  statuses/locks, commission at delivery only (full amount), stock, cancel,
+  products (publish toggle keeps data), applications approve/reject + 7-day
+  re-request, creator limit, short links, payouts + Excel, deactivate/
+  reactivate, uploads, cron/webhook secrets, announcements, emails. All 29
+  pages checked at 375px: no overflow, no console/hydration errors.
+  **Fixed:** signed-in creators opening /admin/* got the "no access" message
+  but the page data (buyer names, phones) was still in the response — added
+  `requireAdminPage()` to all 12 admin pages + layout redirect. Lint now 0
+  warnings. Real data verified unchanged (before/after counts identical).
+
+- **2026-11-21 — Creator discount codes.** Product: `discountEnabled`,
+  `discountBirr`, `discountCode`; Order: `discountBirr` (default 0),
+  `discountCode` (migration `20261121150000_discount_codes`). Admin product
+  form "Creator Discount Code" card (switch, ETB off, code). Buyer page shows
+  "Have a creator code? Save N ETB at checkout" (no code); checkout has a
+  code field + Apply (strike-through old total, new total, Remove).
+  Approved creators see the code with Copy on their product page; others see
+  "you'll get the code once approved". Fixed amount once per order; full
+  commission. Totals everywhere via `orderTotalBirr()`. Tested: save rules,
+  code never in buyer/unapproved-creator page data, wrong/right/case codes,
+  qty 2 → 4,000 → 3,500, stored on order, commission stays 150, off → hint
+  gone + code rejected + values kept, admin list/detail/invoice/tracking/
+  email totals, mobile layout. Discount code field moved to the top of the
+  checkout (right under the product/price row, above Full Name).
+
+- **2026-11-21 — Google sign-in configured (local).** Google Cloud OAuth
+  client (Web) with origins `http://localhost:4000` + `https://binoregn.com`
+  and redirect URIs `…/api/auth/callback/google` for both. Keys in local
+  `.env` (`AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET`). Checked: provider loads,
+  Google shows "Sign in to continue to Binoregn" (no redirect mismatch).
+  Not done: a full sign-in; app is in Google "Testing" mode until
+  published; production needs the same keys + `AUTH_URL=https://binoregn.com`.
+  Google sign-in can't work over LAN IPs (Google rejects private-IP redirects).
+  SMTP DKIM enabled in DirectAdmin (`x._domainkey`, 2048-bit, live on public DNS).
+
+- **2026-11-21 — Email now sends from contact@binoregn.com.** Local `.env`
+  SMTP switched from Gmail to the domain mailbox (DirectAdmin):
+  `mail.binoregn.com:587`, STARTTLS (`SMTP_SECURE=false`),
+  `SMTP_FROM="Binoregn <contact@binoregn.com>"`. Verified connect + TLS +
+  login (nothing sent). DNS: SPF covers the mail server (via `mx`), DMARC
+  `p=none`, **no DKIM record found** — enable DKIM in DirectAdmin to keep
+  mail out of spam. Production server needs the same SMTP_* values.
+
+- **2026-11-21 — Tracking link + Copy fixed on phones.** Order
+  confirmation Copy used only `navigator.clipboard`, which doesn't exist on
+  plain-http pages (phone over LAN / before HTTPS) — it silently did
+  nothing. New `lib/clipboard.ts` `copyText()` (clipboard API, else
+  textarea + execCommand with the iOS selection step; returns whether it
+  worked), used by the confirmation, `CopyButton` and the creator promote
+  button. Confirmation Copy → "Copied" (green, check icon) for 2.5s, or
+  "Couldn't copy" on failure. Tracking link is now built from
+  `window.location.origin` (not the server Host header — wrong behind a
+  proxy/HTTPS) and the URL itself opens the tracking page. Tested over
+  http://LAN: copies the exact URL, label changes, tracking page loads.
+
+- **2026-11-21 — Phone + Call now on order confirmation.** New
+  `SiteSetting` model (migration `20261121120000_site_settings`),
+  `lib/site-settings.ts`, `PATCH /api/admin/site-settings` (phone digits
+  with optional +, spaces/dashes; can't show without a number). Admin
+  Settings → "Phone on order confirmation" card (number, Visible/Hidden
+  switch, Save). The checkout success view shows it between order number
+  and tracking link; Call now = `tel:` with spaces removed. Tested:
+  validation, Settings save, real order on desktop + mobile, hidden →
+  not shown. No number is set yet — admin sets it in Settings.
+
+- **2026-11-21 — Username rules.** `lib/username.ts`: must start with a
+  letter; letters and underscores, numbers only at the end; no spaces;
+  2–60 chars; saved lowercase ("Betty_Picks22" → "betty_picks22").
+  Enforced in `creatorOnboardingSchema` (API) and live in the onboarding
+  form (typing lowercases and drops spaces, rule/error under the field,
+  Continue blocked until valid). Settings uses the new
+  `creatorProfileSchema` (no username) — it never changed the username,
+  and now existing non-conforming usernames (e.g. "Noh Ananda") can
+  still save Settings. The one non-conforming local username ("Noh Ananda")
+  was renamed to "noh_ananda" (user approved); all usernames now match.
+
+- **2026-11-21 — Creator email notifications.** Every creator bell
+  notification is also emailed (all creators, new and existing). New:
+  product paused/available again (bell + email; migration
+  `20261121090000_product_availability_notifications`), and email-only
+  application received, payout details changed, account deactivated.
+  `APP_URL` added to `.env.example` for email links. Tested end to end
+  through the dev server with a local SMTP catcher: 17 emails for 17
+  events, right recipients, no duplicates on repeat actions. Also fixed a
+  pre-existing bug: the admin Products list Publish toggle (PATCH
+  `{ isPublished }`) wiped the product's images/colors/sizes/features and
+  reset stock to 100 (zod `.partial()` re-applied create defaults) — the
+  route now applies only the fields sent.
+
+- **2026-11-12 — Link views once per 24h, commission hardening, phone hydration.**
+  Views: `LinkVisit` model (migration `20261112120000_link_visits`), browser
+  beacon on `/r/[slug]` → `POST /api/public/links/[slug]/view` ("bv" visitor
+  cookie, atomic 24h window); the page no longer counts on every render.
+  Tested: same visitor counts once, again only after 24h, 5 parallel = 1,
+  page loads without JS (link previews) don't count. Commission: created in
+  one transaction (unique per order, atomic stock decrement) — 4 parallel
+  Delivered calls → 1 commission, stock deducted once; fulfillment route now
+  refuses any status change once a commission exists. Hydration (iPhone):
+  `formatDetection` off for phone/date/address/email; all number formatting
+  pinned to en-US and dates to `formatDate()` (Addis time, "12 Nov 2026").
+
+- **2026-11-12 — Root <html> hydration warning on phones.** A phone tab
+  restored from cache kept the old <html> class (before the Mont font was
+  removed) and showed a hydration error. Added `suppressHydrationWarning` to
+  <html> in `app/layout.tsx` (covers that element’s own attributes only).
+
+- **2026-11-12 — Creator copy trimmed.** Home payout card shows only
+  "Pending payout" + amount (dropped the all-time and Friday/min lines);
+  creator product page badge reads "Commission N ETB"; My Links rows show
+  the product name only (no per-order earn line).
+
+- **2026-11-12 — Creator stat cards white with icons.**
+  `components/creator-stat-card.tsx` is now a white card with a tinted
+  icon tile (shared by creator Home, My Links, Applications). My Links:
+  Active links, Link views, Delivered orders (renamed from "Total orders"
+  — it only counts delivered), + Conversion rate (delivered orders ÷
+  views). Applications: Total, Approved, Pending review, + Not approved.
+
+- **2026-11-12 — Product names capped at 15 chars in every table.**
+  `lib/short-name.ts` (`shortProductName`, `TABLE_NAME_MAX = 15`, "…"
+  included) used by all admin and creator tables (orders, dashboard recent
+  orders, products, applications, commissions, creator detail; creator
+  links and applications). The full name stays in a `title` tooltip and
+  on detail pages, cards and invoices.
+
+- **2026-11-12 — Admin orders redesign + order detail/edit (user design reference).**
+  `app/admin/orders`: header with Export (CSV with BOM, opens in Excel);
+  toolbar with search (name/phone/order #), Filter by stage, Sort
+  (newest/oldest/total), Show Statistics toggle (remembered per
+  browser), "Last update" + refresh; four stat cards (Total, Cancelled,
+  Pending, Returned) with this-month-vs-last-month % (Addis time) and a
+  30-day trend line, all from real data; table (checkbox, order #, date,
+  customer + phone, product + options, Delivery stage, items, total,
+  Payment = cash reconciled, ⋮ menu: view/edit, invoice, delete); bulk bar
+  (export selected, update status → processing/shipped/delivered/
+  cancelled, delete); pagination (10/20/50, page numbers with gaps, go to
+  page). "Create Order" from the reference left out — orders only come
+  from creator links (attribution). Rows open `/admin/orders/[id]`: item
+  card, editable customer & delivery form (name, 10-digit phone, city,
+  address, notes; quantity/colour/size only while PLACED), status
+  stepper (forward/back until delivered; cancel/return), payment card,
+  creator + commission card, timeline. New `PATCH /api/admin/orders/[id]`
+  (`updateOrderSchema`): contact fields always editable; item fields
+  409 unless PLACED; colour/size must be product options; attribution
+  never editable; status changes stay on the existing routes. Verified
+  with 14 DB-inserted test orders (no alerts sent; all removed, stock
+  restored): search/filter/sort/paging, bulk ship/delete, detail edit +
+  save, processing, payment, deliver → commission + lock, API 409/400s,
+  no overflow at 375/768/1280. Build currently fails only on the user's
+  in-progress `Mont` import in app/layout.tsx.
+
+- **2026-11-11 — Trust badges, phone rule, bar fix, creator Telegram removed.**
+  Product page: the Delivery Options card is removed. Under Buy Now are
+  four badges from the new `Product.trustBadges String[]` (migration
+  `20261111140000_product_trust_badges`, DB default = "Free Delivery",
+  "Delivered within 2 hours", "Same day return", "Nothing to pay before
+  delivery" — also in `lib/product-badges.ts`); icons by position; empty
+  entries hidden; 2×2 on phones, 4 across from sm. Admin product form:
+  "Delivery Options" section replaced by "Badges under Buy Now" (four
+  inputs, defaults pre-filled; validation requires exactly 4, ≤ 40 chars).
+  The old discount/delivery-time/returns fields are still stored but no
+  longer shown anywhere. Checkout phone: exactly 10 digits, numbers only
+  (input strips non-digits, pattern + "N more digits" hint; server
+  `/^\d{10}$/` in lib/validations/order.ts). Bottom white space: removed
+  the footer padding added for the mobile bar; the bar now also hides
+  when the footer is on screen. Creators no longer get Telegram messages
+  (lib/notifications.ts saves dashboard notifications only;
+  `sendTelegramToCreators` removed; Connect Telegram removed from creator
+  settings; `/api/telegram/link` admin-only). Admin alerts unchanged.
+  Dev fix: `experimental.turbopackFileSystemCacheForDev: false` — the
+  Turbopack dev cache went stale a third time (nested dynamic API routes
+  404 after restarts). Verified on 375px via LAN: no Delivery Options,
+  2×2 badges, no gap under footer, bar hidden at footer; phone filtering /
+  hint / validity and API 400s; admin add form defaults; badge edit shows
+  on page, wrong count → 400, defaults restored; build passes.
+
+- **2026-11-11 — One-step checkout modal (user design reference).**
+  The 2-step checkout is replaced by one form
+  (`app/(public)/r/_components/checkout-form.tsx`) styled after the
+  user's reference: "Please fill in the form to order" + close, product
+  row (image with quantity badge, name, colour / size, adjustable
+  quantity, line price), icon-box fields Full Name*, Phone*, City*
+  (select), Address*, Notes (optional) — all old fields kept — small
+  delivery notes (free delivery in Addis only; arrival within 3 hours if
+  ordered 2:00 AM–11:00 AM LT; pay on receipt; Telebirr and CBE only) and
+  a "Confirm to Delivery" button. No subtotal/total (user request).
+  Buy Now / Add to Cart / the mobile bar open it as a modal
+  (`checkout-modal.tsx`: bottom sheet on phones, centred 460px dialog
+  from sm, portalled, scroll lock, Esc/backdrop close); quantity edits
+  sync back to the product page. The links still point to
+  `/r/[slug]/order`, now a single centred card with the same form
+  (qty/colour/size from the query string). Confirmation text changed
+  from "Pay cash when your order arrives" to "Pay when your order
+  arrives" (the same modal now says Telebirr/CBE only). Verified: modal
+  fields/notes/button at 375px via LAN, real order placed and stored
+  with all fields (deleted afterwards), Done/Esc close + scroll unlock,
+  desktop dialog centred, fallback page with qty=2, build passes.
+
+- **2026-11-11 — Product page: whitish look, image viewer, sticky buy bar.**
+  Backdrop toned to white with faint brand tints; cards are near-solid
+  white with hairline borders (header/footer too). Tapping a main image
+  opens a full-screen viewer (`ImageViewer` in product-gallery.tsx:
+  portalled to body, object-contain, swipe/arrows/keys, Esc/✕/backdrop
+  close, scroll lock). Quantity stepper and Buy Now share one row; a trust
+  row under it shows delivery time, returns (same values as Delivery
+  Options) and "Nothing to pay before delivery". Phones get a pop-up
+  Buy Now bar (total, stepper, Buy Now; same qty/colour/size) that slides
+  up once scrolling starts while the inline Buy Now row is off screen;
+  visibility is computed from element positions on scroll (an
+  IntersectionObserver version never updated in a backgrounded page), and
+  the footer gets bottom padding via `body:has([data-buy-bar]) footer`.
+  Header badge + footer now say "Mobile Transfer on Delivery" (footer
+  subtitle "Pay via mobile transfer when your order arrives."; second
+  footer line now "Nothing to pay before delivery"). **Decision (user):**
+  only header and footer change — Delivery Options "Payment: Cash on
+  Delivery", the checkout button/confirmation and the invoice still say
+  cash. Verified at 375/768/1280 (no overflow; qty+Buy Now on one row; bar
+  phone-only, shows past the button, hides when it's on screen; footer
+  contact not covered); viewer open/swipe/close; build passes.
+
+- **2026-11-11 — Product descriptions cleaned (user request).**
+  `lib/sanitize-html.ts` rewritten as a small tree-based cleaner (same
+  safety whitelist): keeps only editor-palette text colours
+  (`EDITOR_COLORS`, brand colours) and plain text-align values; flattens a
+  list item that only wraps another list (the doubled bullets); drops
+  empty elements and attribute-less spans; converts bold font-weight on
+  inline-only elements to <strong> (not on section wrappers, which would
+  bold whole paragraphs); auto-closes unclosed li/p. Runs on paste in the
+  editor, on save (`lib/validations/product.ts` transform) and on render.
+  Editor colour buttons now emit inline colour styles (they produced
+  `<font>` tags the sanitizer dropped, so colours never showed) and use
+  the brand palette. Rich text spaces top-level div sections
+  (`[&>div+div]:mt-3`). Existing descriptions cleaned from a backup
+  (`backups/product-descriptions-2026-11-11.json`, gitignored):
+  XPPen 18,780 → 825 chars, Anker 23,322 → 1,486. Verified: 27 sanitizer
+  cases incl. XSS vectors; single bullets on XPPen; Anker sections spaced;
+  editor paste cleans live; colour button output survives. Anker's
+  feature titles aren't bold — the source only set weight on whole
+  sections; bold them in the editor if wanted.
+
+- **2026-11-11 — Product page glass look + phone fix.** Product page
+  background is a fixed "white glass" backdrop
+  (`components/product/glass-backdrop.tsx`: blurred brand-green /
+  light-green / light-blue blobs) with translucent frosted cards
+  (collapsibles, recommendation cards, buyer header/footer). Removed the
+  "Cash on delivery · pay when it arrives" pill under the price (COD still
+  shows in the header chip, Delivery Options and the footer). "More from
+  this creator" → "More to Explore" (only shown when the creator has
+  other products). "See more" fades the text with a CSS mask instead of a
+  white overlay, which showed as a pale band on glass.
+  **Phone bug root cause:** the dev server was opened from a phone via
+  the PC's LAN IP (192.168.1.121). Next 16 blocks dev resources for
+  non-localhost hosts, so the page never hydrated and no toggle worked.
+  Fixed with `allowedDevOrigins: ["192.168.*.*"]` in `next.config.ts`
+  (dev only; production unaffected). Verified through the LAN address at
+  375px: hydrates, Description toggles, See more expands; no horizontal
+  overflow at 375/768/1280. Content note: the XPPen description was pasted
+  from another site with ~18 KB of inline styles, which causes a doubled
+  bullet on its first list.
+
+- **2026-11-11 — Brand refresh + product page polish (user request).**
+  Palette and type from the user's brand sheet applied via the existing
+  tokens in `app/globals.css` (see design-system.md); `font-bold` → 600;
+  Inter is now first in the stack (was Segoe UI). Lufga not added — it's
+  a licensed font; needs the user's font files. Chart colours on creator
+  dashboards switched to brand colours. Logo: trimmed web versions in
+  `public/brand/` (dark + white), `Logo` gained `variant`; logo added
+  to landing header/footer, buyer pages (new header in
+  `app/(public)/layout.tsx`), onboarding + pending cards, invoice.
+  Containers narrowed (buyer/landing `max-w-5xl`, dashboards
+  `max-w-[1120px]`). Product gallery is a swipeable scroll-snap carousel;
+  Description/Delivery collapsibles and "See more" animate. Verified:
+  25 pages × 375/768/1280px with no horizontal overflow (public,
+  creator, admin), swipe + thumbnail sync, transitions present (300ms)
+  and correct open/closed heights. Not verified: animation smoothness
+  by eye (the browser pane was hidden, which pauses CSS animations).
+
+- **2026-11-11 — Telegram verified live.** Bot `@BinoregnNotifyBot`
+  (token/username in local `.env`). Real delivery confirmed: admin
+  connected via Settings → Connect Telegram through a temporary
+  Cloudflare quick tunnel (a local relay exposed only
+  `POST /api/telegram/webhook`, since dev accepts the 000000 code), and
+  a real new-order alert arrived. Test webhook deleted afterwards, so
+  the bot has no webhook until `npm run telegram:webhook -- https://<domain>`
+  is run on the deployed site; the admin must reconnect there (separate
+  database). Fix found while testing: Node tried api.telegram.org over
+  IPv6 first and timed out on this network — `instrumentation.ts` now
+  sets `dns.setDefaultResultOrder("ipv4first")` at server start (same
+  in `scripts/set-telegram-webhook.ts`).
+
+- **2026-11-11 — Unit (f) done: speed + trust details. All six units
+  of the update list are built; `npm run build` passes.** Uploads
+  (`POST /api/admin/uploads`) are now auto-rotated, resized to fit
+  1600×1600 and re-encoded as WebP q80 with `sharp` (now a direct
+  dependency); GIFs kept as-is; raw limit raised 5 → 15 MB since
+  output is small (test: 3.8 MB 4000×3000 JPEG → 293 KB 1600×1200
+  WebP); undecodable files rejected. Images uploaded before this
+  change are not recompressed. Gallery thumbnails and recommendation
+  cards lazy-load. "Cash on delivery · pay when it arrives" pill under
+  the price on every product page; new `app/(public)/layout.tsx`
+  footer on all buyer pages with COD + contact details
+  (`lib/site.ts`, `NEXT_PUBLIC_CONTACT_EMAIL` / `_PHONE`).
+  `next.config.ts` sends `X-Content-Type-Options`, `Referrer-Policy`
+  and, in production only, HSTS. The certificate and http→https
+  redirect must be set up on the reverse proxy — not app code. Not
+  measured: real load time on a slow mobile connection.
+  **Deploy checklist:** `npx prisma migrate deploy` (rewrites link
+  codes, converts withdrawals, adds payouts/notifications/Telegram
+  columns); fill the new `.env` keys (see `.env.example`); create the
+  bot with @BotFather and run `npm run telegram:webhook --
+  https://<domain>`; add the Friday cron line from
+  `app/api/cron/payout-reminder/route.ts`; HTTPS on the proxy.
+
+- **2026-11-11 — Units (d) + (e) done: stored notifications,
+  announcements, Telegram bot.** New models `Notification`,
+  `Announcement`, enum `NotificationType`, `CreatorProfileStatus.REJECTED`
+  (migration `20261111082708_notifications_and_profile_rejection`) and
+  `User.telegramChatId`/`telegramLinkToken` (`20261111083500_user_telegram`,
+  written from `prisma migrate diff` because `migrate dev` refuses to
+  run non-interactively when it warns about new unique indexes).
+  `lib/notifications.ts` (save + Telegram, never throws, HTML-escaped),
+  `lib/telegram.ts` (send, admin alerts, auto-unlink on 403),
+  `lib/order-events.ts` (`afterOrderDelivered`: creator message +
+  low/out-of-stock alert; called by the delivery, fulfillment and
+  cash-reconciled routes when a commission was created). Triggers:
+  profile approve/reject (`PATCH /api/admin/creators/[id]/approve` now
+  takes `{ decision }`), request approve/reject, order delivered,
+  payout paid, announcements (`/admin/announcements` +
+  `POST /api/admin/announcements`). Creator bell reads stored rows and
+  marks them read via `POST /api/creator/notifications/read` (replaces
+  the localStorage "seen" list). Admin alerts on Telegram: new order,
+  creator signup, product request, stock, Friday reminder
+  (`GET /api/cron/payout-reminder`). Telegram linking:
+  `/api/telegram/link`, `/api/telegram/webhook`,
+  `components/telegram-connect.tsx` on creator + admin settings,
+  `npm run telegram:webhook -- https://domain`. `lib/site.ts` holds
+  public contact details. Verified locally: every trigger saved the
+  right notification (profile reject, request approve, delivered with
+  order number + commission, payout paid), bell + read endpoint,
+  rejected creator's pending page, announcement to 3 creators (test
+  rows deleted afterwards), webhook secret/403, private-chat-only,
+  one-time token, chat moved between accounts, /stop, cron auth +
+  Friday guard. **Not verified: real Telegram delivery** (no bot token
+  yet). Dev note: Turbopack's dev filesystem cache sometimes keeps a
+  stale route list across restarts (new or nested routes 404); deleting
+  `.next/dev` fixes it. Production builds don't use that cache.
+
+- **2026-11-11 — Unit (c) done: Friday payouts replace withdrawals.**
+  `lib/commission/index.ts` now creates commissions PENDING (the
+  single-commission `markCommissionPaid` and
+  `PATCH /api/admin/commissions/[id]/pay` are gone).
+  `lib/commission/payouts.ts`: `payoutCutoff` (latest Thursday
+  23:59:59.999 Addis time), `upcomingPayoutCutoff` (creator-facing:
+  the Friday that's today or ahead), `getDuePayouts` (live, ≥ 500
+  Birr), `markPayoutPaid` (one transaction; conditional updateMany
+  refuses double-payment). New `Payout` model + `Commission.payoutId`;
+  `Withdrawal` + `WithdrawalStatus` dropped in migration
+  `20261111081224_friday_payouts`, which first converts legacy data
+  (oldest PAID commissions covered by approved withdrawals stay PAID
+  under one legacy Payout; the rest go back to PENDING — tested in a
+  rolled-back transaction). Admin: `app/admin/payouts` (KPIs, ready-
+  to-pay table with payout details, Mark paid / Mark all paid with
+  confirm, recent payouts) + `GET/POST /api/admin/payouts` +
+  `GET /api/admin/payouts/export` (Excel via `exceljs`, account
+  numbers as text). Sidebar "Withdrawals" → "Payouts"; admin bell
+  shows "Payouts due: N creators · X Birr". Admin commissions page
+  says "Paid on Friday" instead of a Mark paid button. Creator
+  earnings/home pages show next payout + "How payouts work" instead
+  of the withdrawal form; history lists Friday payouts. Admin creator
+  detail shows "Due this Friday" and payout history. Verified: cutoff
+  unit cases (incl. Fri 00:30 Addis = Thu UTC, exactly 11:59:59.999
+  PM), due list includes the 11:59 PM commission and excludes 12:00:01
+  AM and a 300 Birr creator, Excel contents, mark paid → 4 commissions
+  PAID + Payout snapshot, second attempt "Nothing due", future cutoff
+  rejected, marking an order Delivered via the admin API → PENDING
+  commission.
+
+- **2026-11-11 — Unit (b) done: on-screen-only order confirmation.**
+  Buyer email field, `buyerEmail` validation, and the tracking email
+  (`sendOrderTrackingEmail`) removed; the `Order.buyerEmail` column
+  stays (nullable, older orders). Confirmation shows "Order number:
+  #XXXXXXXX" and the tracking link. `lib/order-number.ts` is now the
+  single order-number format (last 8 chars of the id, uppercase) —
+  admin orders/commissions/invoice previously showed the first 8–10
+  chars, which share a timestamp prefix and didn't match what buyers
+  see.
+
+- **2026-11-11 — Unit (a) done: creator product page, re-request,
+  creator limit.** Buyer product layout extracted to
+  `components/product/product-showcase.tsx` (+ gallery/collapsible
+  card moved to `components/product/`), used by both
+  `app/(public)/r/[slug]` and the new `app/creator/products/[id]`
+  page. Creator page adds the commission badge, "N of M spots left",
+  and `promote-button.tsx` (Request to Promote → Waiting for Approval →
+  Copy Link + Share / Not Approved with re-request date / Full). State
+  logic lives in `lib/promotion.ts` (`promoteState`, `spotsLeft`,
+  `REREQUEST_AFTER_DAYS = 7`). Catalog cards now open the product
+  page (old preview drawer and card Apply button removed) and show the
+  same state labels; sidebar search links to the product page.
+  `Product.maxCreators Int?` (migration
+  `20261111080221_product_max_creators`), editable as "Creator limit"
+  in the admin product form. `POST /api/creator/applications` now
+  rejects hidden products, enforces the 7-day wait and the limit, and
+  upserts so a rejected (or admin soft-deleted) row is reset to
+  PENDING. Admin approve refuses when full and reuses an existing
+  link for the same creator+product instead of minting a second.
+  Known gap: two simultaneous admin approvals on the last spot could
+  both succeed (no row lock) — acceptable for a single admin.
+  Verified locally in the browser (catalog "Full", request → waiting,
+  reject → date shown + API 409, re-request after 8 days, admin
+  approve → Copy/Share, full-product approve → 409, mobile layout,
+  public `/r/` page unchanged with no commission shown).
+
+- **2026-11-10 — Short affiliate links: `/r/[code]` replaces
+  `/p/[creator]/[slug]`.** Requested by the user: links were long
+  (`/p/<username>/<25-char cuid>`) and, for creators without a
+  username, leaked their email local-part into a public URL. New
+  format is `/r/<7-char base62 code>`, e.g. `/r/uytYfM6`.
+  **Decision (confirmed with the user): old `/p/...` URLs are removed
+  outright and now 404 — no redirect.** Anything creators already
+  posted with the old format stops working.
+  Implementation: the code lives in the existing `AffiliateLink.slug`
+  column (not renamed — `affiliateLinkSlug` stays the name everywhere
+  in APIs/checkout). `@default(cuid())` was dropped so the slug must be
+  set explicitly; it's generated by `lib/affiliate-link-code.ts`
+  (`node:crypto` `randomInt`, 62^7 ≈ 3.5T combinations) in
+  `PATCH /api/admin/applications/[id]` on approval, retrying up to 3
+  times on a P2002 unique collision. Migration
+  `20261110000000_short_affiliate_link_codes` rewrites every existing
+  slug to a fresh unique 7-char code (plpgsql loop, same alphabet).
+  `lib/affiliate-link-path.ts` is the single place the URL is built
+  (`/r/${code}`), split from the generator so client components can
+  import it without `node:crypto`. Pages moved
+  `app/(public)/p/[creator]/[slug]` → `app/(public)/r/[slug]`
+  (+ `/order`); the creator Links page and product catalog copy
+  buttons no longer fetch or use a creator username. Verified end to
+  end locally: admin approval → 7-char code; `/r/<code>` and
+  `/r/<code>/order` render; recommendation cards link to `/r/...`;
+  checkout through the code attributes the order to the right
+  creator; copy buttons copy `/r/<code>`; old `/p/...` and unknown
+  codes 404. `npm run build` passes.
+  **Deploy note:** run `npx prisma migrate deploy` on the server — it
+  rewrites all production link codes.
+
 - **2026-07-29 — Product publish/unpublish + stock, with auto-hide on
   0 stock.** New concept, didn't exist before: `Product.stock` (Int,
   `@default(100)` — the default only matters for the migration

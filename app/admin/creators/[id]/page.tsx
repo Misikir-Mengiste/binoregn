@@ -11,12 +11,21 @@ import {
   FileText,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import {
+  formatAddisDate,
+  payoutCutoff,
+  PAYOUT_MIN_BIRR,
+} from "@/lib/commission/payouts";
 import { PageHeader } from "@/components/page-header";
 import { KpiStrip } from "@/components/kpi-strip";
 import { StatusBadge } from "@/components/status-badge";
 import { InitialsAvatar } from "@/components/initials-avatar";
 import { CreatorApproveButton } from "./creator-approve-button";
 import { CreatorDeactivateButton } from "./creator-deactivate-button";
+import { shortProductName } from "@/lib/short-name";
+import { formatDate } from "@/lib/format";
+import { orderTotalBirr } from "@/lib/discount";
+import { requireAdminPage } from "@/lib/auth-helpers";
 
 const PAYOUT_METHOD_LABELS: Record<string, string> = {
   BANK_TRANSFER: "Bank transfer",
@@ -25,7 +34,7 @@ const PAYOUT_METHOD_LABELS: Record<string, string> = {
 };
 
 function birr(amount: number) {
-  return `${amount.toLocaleString()} ETB`;
+  return `${amount.toLocaleString("en-US")} ETB`;
 }
 
 function Section({
@@ -62,6 +71,7 @@ export default async function AdminCreatorDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdminPage();
   const { id } = await params;
 
   const creator = await prisma.user.findUnique({
@@ -92,7 +102,7 @@ export default async function AdminCreatorDetailPage({
     notFound();
   }
 
-  const [commissions, withdrawals, applications, links, orders] =
+  const [commissions, payouts, applications, links, orders] =
     await Promise.all([
       prisma.commission.findMany({
         where: { creatorId: id },
@@ -106,16 +116,15 @@ export default async function AdminCreatorDetailPage({
           order: { select: { id: true, product: { select: { name: true } } } },
         },
       }),
-      prisma.withdrawal.findMany({
+      prisma.payout.findMany({
         where: { creatorId: id },
-        orderBy: { createdAt: "desc" },
+        orderBy: { paidAt: "desc" },
         select: {
           id: true,
           amountBirr: true,
-          status: true,
-          createdAt: true,
-          decidedAt: true,
+          paidAt: true,
           payoutMethod: true,
+          _count: { select: { commissions: true } },
         },
       }),
       prisma.application.findMany({
@@ -143,6 +152,7 @@ export default async function AdminCreatorDetailPage({
         select: {
           id: true,
           quantity: true,
+          discountBirr: true,
           deliveryStatus: true,
           affiliateLinkId: true,
           product: { select: { priceBirr: true } },
@@ -158,14 +168,18 @@ export default async function AdminCreatorDetailPage({
     .filter((c) => c.status === "PAID")
     .reduce((sum, c) => sum + c.amountBirr, 0);
   const totalEarned = pendingBirr + paidBirr;
-  const withdrawnTotal = withdrawals
-    .filter((w) => w.status !== "REJECTED")
-    .reduce((sum, w) => sum + w.amountBirr, 0);
-  const availableBalance = Math.max(paidBirr - withdrawnTotal, 0);
+  // What the current Friday payout covers for them (lib/commission/payouts.ts);
+  // it is only paid out once it reaches PAYOUT_MIN_BIRR.
+  const cutoff = payoutCutoff();
+  const dueBirr = commissions
+    .filter((c) => c.status === "PENDING" && c.createdAt <= cutoff)
+    .reduce((sum, c) => sum + c.amountBirr, 0);
 
   // Revenue driven — order value attributed to this creator.
   const revenueBirr = orders.reduce(
-    (sum, o) => sum + o.product.priceBirr * o.quantity,
+    (sum, o) =>
+      sum +
+      orderTotalBirr({ priceBirr: o.product.priceBirr, quantity: o.quantity, discountBirr: o.discountBirr }),
     0,
   );
   const deliveredCount = orders.filter(
@@ -225,7 +239,10 @@ export default async function AdminCreatorDetailPage({
             <span className="text-xs text-ink-400">Onboarding incomplete</span>
           )}
           {!isApproved && creator.creatorOnboardingCompletedAt ? (
-            <CreatorApproveButton creatorId={creator.id} />
+            <CreatorApproveButton
+              creatorId={creator.id}
+              canReject={creator.creatorProfileStatus !== "REJECTED"}
+            />
           ) : null}
           <CreatorDeactivateButton
             creatorId={creator.id}
@@ -259,11 +276,14 @@ export default async function AdminCreatorDetailPage({
             caption: "Commissions marked paid",
           },
           {
-            label: "Available balance",
-            value: birr(availableBalance),
+            label: "Due this Friday",
+            value: birr(dueBirr),
             icon: PiggyBank,
             accent: "teal",
-            caption: "Paid minus withdrawals",
+            caption:
+              dueBirr >= PAYOUT_MIN_BIRR
+                ? "Included in the Friday payout"
+                : `Rolls over until it reaches ${PAYOUT_MIN_BIRR} Birr`,
           },
         ]}
       />
@@ -280,21 +300,21 @@ export default async function AdminCreatorDetailPage({
           },
           {
             label: "Orders",
-            value: orders.length.toLocaleString(),
+            value: orders.length.toLocaleString("en-US"),
             icon: ShoppingBag,
             accent: "orange",
-            caption: `${deliveredCount.toLocaleString()} delivered`,
+            caption: `${deliveredCount.toLocaleString("en-US")} delivered`,
           },
           {
             label: "Active links",
-            value: links.length.toLocaleString(),
+            value: links.length.toLocaleString("en-US"),
             icon: Link2,
             accent: "mint",
             caption: "Approved affiliate links",
           },
           {
             label: "Applications",
-            value: applications.length.toLocaleString(),
+            value: applications.length.toLocaleString("en-US"),
             icon: FileText,
             accent: "coral",
             caption: "Products applied to",
@@ -334,15 +354,13 @@ export default async function AdminCreatorDetailPage({
             <InfoRow label="Category" value={creator.creatorCategory} />
             <InfoRow
               label="Joined"
-              value={new Date(creator.createdAt).toLocaleDateString()}
+              value={formatDate(creator.createdAt)}
             />
             <InfoRow
               label="Onboarding completed"
               value={
                 creator.creatorOnboardingCompletedAt
-                  ? new Date(
-                      creator.creatorOnboardingCompletedAt,
-                    ).toLocaleDateString()
+                  ? formatDate(creator.creatorOnboardingCompletedAt,)
                   : null
               }
             />
@@ -385,10 +403,10 @@ export default async function AdminCreatorDetailPage({
               {applications.map((application) => (
                 <tr key={application.id} className="border-t border-border">
                   <td className="px-5 py-3 font-medium text-foreground">
-                    {application.product.name}
+                    <span title={application.product.name}>{shortProductName(application.product.name)}</span>
                   </td>
                   <td className="px-5 py-3 text-ink-600">
-                    {new Date(application.createdAt).toLocaleDateString()}
+                    {formatDate(application.createdAt)}
                   </td>
                   <td className="px-5 py-3">
                     <StatusBadge status={application.status} />
@@ -428,16 +446,16 @@ export default async function AdminCreatorDetailPage({
                 return (
                   <tr key={link.id} className="border-t border-border">
                     <td className="px-5 py-3 font-medium text-foreground">
-                      {link.product.name}
+                      <span title={link.product.name}>{shortProductName(link.product.name)}</span>
                     </td>
                     <td className="px-5 py-3 text-ink-600">
-                      {link.viewCount.toLocaleString()}
+                      {link.viewCount.toLocaleString("en-US")}
                     </td>
                     <td className="px-5 py-3 text-ink-600">
-                      {(stats?.orders ?? 0).toLocaleString()}
+                      {(stats?.orders ?? 0).toLocaleString("en-US")}
                     </td>
                     <td className="px-5 py-3 text-ink-600">
-                      {(stats?.delivered ?? 0).toLocaleString()}
+                      {(stats?.delivered ?? 0).toLocaleString("en-US")}
                     </td>
                   </tr>
                 );
@@ -473,7 +491,7 @@ export default async function AdminCreatorDetailPage({
               {commissions.map((commission) => (
                 <tr key={commission.id} className="border-t border-border">
                   <td className="px-5 py-3 font-medium text-foreground">
-                    {commission.order.product.name}
+                    <span title={commission.order.product.name}>{shortProductName(commission.order.product.name)}</span>
                   </td>
                   <td className="px-5 py-3 text-ink-600">
                     {birr(commission.amountBirr)}
@@ -482,7 +500,7 @@ export default async function AdminCreatorDetailPage({
                     <StatusBadge status={commission.status} />
                   </td>
                   <td className="px-5 py-3 text-ink-600">
-                    {new Date(commission.createdAt).toLocaleDateString()}
+                    {formatDate(commission.createdAt)}
                   </td>
                 </tr>
               ))}
@@ -501,43 +519,45 @@ export default async function AdminCreatorDetailPage({
         </div>
       </Section>
 
-      {/* Withdrawals */}
-      <Section title="Withdrawals">
+      {/* Friday payouts */}
+      <Section title="Payouts">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[13.5px]">
             <thead>
               <tr className="bg-surface-100 text-xs text-ink-400">
                 <th className="px-5 py-3 font-medium">Amount</th>
                 <th className="px-5 py-3 font-medium">Method</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium">Requested</th>
+                <th className="px-5 py-3 font-medium">Commissions</th>
+                <th className="px-5 py-3 font-medium">Paid on</th>
               </tr>
             </thead>
             <tbody>
-              {withdrawals.map((withdrawal) => (
-                <tr key={withdrawal.id} className="border-t border-border">
+              {payouts.map((payout) => (
+                <tr key={payout.id} className="border-t border-border">
                   <td className="px-5 py-3 font-medium text-foreground">
-                    {birr(withdrawal.amountBirr)}
+                    {birr(payout.amountBirr)}
                   </td>
                   <td className="px-5 py-3 text-ink-600">
-                    {PAYOUT_METHOD_LABELS[withdrawal.payoutMethod] ??
-                      withdrawal.payoutMethod}
-                  </td>
-                  <td className="px-5 py-3">
-                    <StatusBadge status={withdrawal.status} />
+                    {payout.payoutMethod
+                      ? PAYOUT_METHOD_LABELS[payout.payoutMethod] ??
+                        payout.payoutMethod
+                      : "—"}
                   </td>
                   <td className="px-5 py-3 text-ink-600">
-                    {new Date(withdrawal.createdAt).toLocaleDateString()}
+                    {payout._count.commissions.toLocaleString("en-US")}
+                  </td>
+                  <td className="px-5 py-3 text-ink-600">
+                    {formatAddisDate(payout.paidAt)}
                   </td>
                 </tr>
               ))}
-              {withdrawals.length === 0 && (
+              {payouts.length === 0 && (
                 <tr>
                   <td
                     colSpan={4}
                     className="px-5 py-8 text-center text-sm text-muted-foreground"
                   >
-                    No withdrawal requests yet.
+                    No payouts yet.
                   </td>
                 </tr>
               )}

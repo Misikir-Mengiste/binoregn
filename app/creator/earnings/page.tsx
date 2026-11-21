@@ -3,7 +3,12 @@ import { BadgeCheck, Clock, Wallet, type LucideIcon } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
-import { WithdrawalForm } from "./withdrawal-form";
+import {
+  formatAddisDate,
+  payoutDay,
+  PAYOUT_MIN_BIRR,
+  upcomingPayoutCutoff,
+} from "@/lib/commission/payouts";
 import { EarningsHistory, type HistoryItem } from "./earnings-history";
 
 const PAYOUT_METHOD_LABELS: Record<string, string> = {
@@ -14,15 +19,15 @@ const PAYOUT_METHOD_LABELS: Record<string, string> = {
 
 // Palette for the "Earnings by product" bars.
 const BAR_COLORS = [
-  "#00a389", // teal-600
-  "#2f6fed", // blue-700
-  "#f5a524", // orange-500
-  "#3bb273", // mint-500
-  "#f14c4c", // coral-500
+  "#0cb587", // brand green
+  "#1c6fa8", // blue-700
+  "#a2a50a", // brand olive
+  "#7fd9a8", // light green
+  "#b5200c", // brand red
 ];
 
 function birr(amount: number) {
-  return `${amount.toLocaleString()} ETB`;
+  return `${amount.toLocaleString("en-US")} ETB`;
 }
 
 function SummaryCard({
@@ -65,7 +70,7 @@ export default async function CreatorEarningsPage() {
   const session = await auth();
   const creatorId = session!.user.id;
 
-  const [commissions, withdrawals, user] = await Promise.all([
+  const [commissions, payouts, user] = await Promise.all([
     prisma.commission.findMany({
       where: { creatorId },
       orderBy: { createdAt: "desc" },
@@ -78,16 +83,15 @@ export default async function CreatorEarningsPage() {
         order: { select: { product: { select: { name: true } } } },
       },
     }),
-    prisma.withdrawal.findMany({
+    prisma.payout.findMany({
       where: { creatorId },
-      orderBy: { createdAt: "desc" },
+      orderBy: { paidAt: "desc" },
       select: {
         id: true,
         amountBirr: true,
-        status: true,
-        createdAt: true,
-        decidedAt: true,
+        paidAt: true,
         payoutMethod: true,
+        _count: { select: { commissions: true } },
       },
     }),
     prisma.user.findUnique({
@@ -108,10 +112,15 @@ export default async function CreatorEarningsPage() {
     .filter((c) => c.status === "PAID")
     .reduce((sum, c) => sum + c.amountBirr, 0);
   const totalEarned = pendingBirr + paidBirr;
-  const withdrawnTotal = withdrawals
-    .filter((w) => w.status !== "REJECTED")
-    .reduce((sum, w) => sum + w.amountBirr, 0);
-  const availableBalance = Math.max(paidBirr - withdrawnTotal, 0);
+  // Friday payouts (lib/commission/payouts.ts): this Friday covers PENDING
+  // commissions from before the latest Thursday 11:59 PM cutoff, once
+  // they add up to PAYOUT_MIN_BIRR; anything newer waits a week. Creators
+  // see the Friday that's today or still ahead, never a past one.
+  const cutoff = upcomingPayoutCutoff();
+  const nextFriday = payoutDay(cutoff);
+  const nextPayoutBirr = commissions
+    .filter((c) => c.status === "PENDING" && c.createdAt <= cutoff)
+    .reduce((sum, c) => sum + c.amountBirr, 0);
 
   // Earnings by product (top 5), with share of total earned.
   const byProduct = new Map<string, number>();
@@ -129,7 +138,7 @@ export default async function CreatorEarningsPage() {
       color: BAR_COLORS[index % BAR_COLORS.length],
     }));
 
-  // Combined history: commissions in (+), withdrawals out (−).
+  // Combined history: commissions in (+), Friday payouts out (−).
   const history: HistoryItem[] = [
     ...commissions.map((c) => ({
       id: `c-${c.id}`,
@@ -141,19 +150,22 @@ export default async function CreatorEarningsPage() {
       amountBirr: c.amountBirr,
       direction: "in" as const,
     })),
-    ...withdrawals.map((w) => ({
-      id: `w-${w.id}`,
-      kind: "WITHDRAWAL" as const,
-      title: "Withdrawal",
-      subtitle: `Payout · ${PAYOUT_METHOD_LABELS[w.payoutMethod] ?? w.payoutMethod}`,
-      status: w.status,
-      at: w.decidedAt ?? w.createdAt,
-      amountBirr: w.amountBirr,
-      direction:
-        w.status === "APPROVED"
-          ? ("out" as const)
-          : ("neutral" as const),
-    })),
+    ...payouts.map((payout) => {
+      const count = payout._count.commissions;
+      const method = payout.payoutMethod
+        ? ` · ${PAYOUT_METHOD_LABELS[payout.payoutMethod] ?? payout.payoutMethod}`
+        : "";
+      return {
+        id: `p-${payout.id}`,
+        kind: "PAYOUT" as const,
+        title: "Friday payout",
+        subtitle: `${count} commission${count === 1 ? "" : "s"}${method}`,
+        status: "PAID",
+        at: payout.paidAt,
+        amountBirr: payout.amountBirr,
+        direction: "out" as const,
+      };
+    }),
   ].sort((a, b) => b.at.getTime() - a.at.getTime());
 
   const payoutMethodLabel = user?.payoutMethod
@@ -167,7 +179,7 @@ export default async function CreatorEarningsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Earnings"
-        description="Track your commissions and request withdrawals."
+        description="Track your commissions. Payouts are sent every Friday."
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
@@ -176,13 +188,18 @@ export default async function CreatorEarningsPage() {
           {/* Balance card */}
           <div className="relative overflow-hidden rounded-[18px] bg-gradient-to-br from-ink-900 to-teal-700 p-5 text-white shadow-card">
             <div className="flex items-start justify-between">
-              <span className="text-xs text-white/70">Available to withdraw</span>
+              <span className="text-xs text-white/70">Next payout</span>
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
                 <Wallet className="h-4 w-4" />
               </span>
             </div>
             <p className="mt-3 text-[28px] leading-tight font-bold">
-              {birr(availableBalance)}
+              {birr(nextPayoutBirr)}
+            </p>
+            <p className="mt-1 text-xs text-white/70">
+              {nextPayoutBirr >= PAYOUT_MIN_BIRR
+                ? formatAddisDate(nextFriday)
+                : `${birr(PAYOUT_MIN_BIRR - nextPayoutBirr)} more to reach the ${birr(PAYOUT_MIN_BIRR)} minimum`}
             </p>
             <p className="mt-5 text-sm tracking-[0.2em] text-white/85">
               {maskedAccount}
@@ -195,15 +212,12 @@ export default async function CreatorEarningsPage() {
             </div>
           </div>
 
-          {/* Withdraw */}
+          {/* How payouts work */}
           <section className="overflow-hidden rounded-[16px] border border-border bg-card shadow-card">
             <header className="flex items-center justify-between border-b border-border px-5 py-3.5">
-              <div>
-                <h2 className="text-[15px] font-bold text-foreground">
-                  Withdraw
-                </h2>
-                <p className="text-xs text-ink-400">Needs admin approval</p>
-              </div>
+              <h2 className="text-[15px] font-bold text-foreground">
+                How payouts work
+              </h2>
               <Link
                 href="/creator/settings"
                 className="text-xs font-medium text-teal-700"
@@ -211,13 +225,21 @@ export default async function CreatorEarningsPage() {
                 Payout details
               </Link>
             </header>
-            <div className="p-5">
-              <WithdrawalForm
-                availableBirr={availableBalance}
-                payoutMethod={user?.payoutMethod ?? null}
-                hasPayoutMethod={Boolean(user?.payoutAccountNumber)}
-              />
-            </div>
+            <ul className="flex flex-col gap-2 p-5 text-sm text-ink-600">
+              <li>• Paid every Friday to your payout account.</li>
+              <li>
+                • Covers commissions from orders delivered by Thursday 11:59 PM.
+              </li>
+              <li>
+                • Minimum {birr(PAYOUT_MIN_BIRR)} — smaller amounts roll over to
+                the next Friday.
+              </li>
+              {!user?.payoutAccountNumber ? (
+                <li className="font-medium text-orange-500">
+                  • Add your payout details so we can pay you.
+                </li>
+              ) : null}
+            </ul>
           </section>
 
           {/* Earnings by product */}

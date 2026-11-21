@@ -37,7 +37,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 // Pure reference data (bank/wallet names) with no FK relations pointing
-// at it — payoutBankName on User/Withdrawal is a plain string snapshot,
+// at it — payoutBankName on User/Payout is a plain string snapshot,
 // not a foreign key — so a hard delete is safe at any time.
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   const authed = await requireAdmin();

@@ -13,7 +13,7 @@ const PERIODS: { key: keyof PeriodTotals; label: string }[] = [
 ];
 
 function birr(amount: number) {
-  return `${amount.toLocaleString()} ETB`;
+  return `${amount.toLocaleString("en-US")} ETB`;
 }
 
 /** GMV vs. total commission paid, toggled between the same four trailing windows. */

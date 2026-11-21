@@ -15,7 +15,7 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = basePrisma;
 }
 
-// Order, Commission, Withdrawal, and Application are financial/approval
+// Order, Commission, and Application are financial/approval
 // records — context/architecture.md's invariants require their history
 // to persist (immutable audit trail, forward-only status, approval
 // gates AffiliateLink creation), so admin "delete" on these is a soft
@@ -27,7 +27,6 @@ if (process.env.NODE_ENV !== "production") {
 const SOFT_DELETE_MODELS = new Set([
   "Order",
   "Commission",
-  "Withdrawal",
   "Application",
 ]);
 
@@ -57,16 +56,6 @@ function softDelete(model: string, where: Record<string, unknown>, many: boolean
           })
         : basePrisma.commission.update({
             where: where as Parameters<typeof basePrisma.commission.update>[0]["where"],
-            data: { deletedAt: new Date() },
-          });
-    case "Withdrawal":
-      return many
-        ? basePrisma.withdrawal.updateMany({
-            where: where as Parameters<typeof basePrisma.withdrawal.updateMany>[0]["where"],
-            data: { deletedAt: new Date() },
-          })
-        : basePrisma.withdrawal.update({
-            where: where as Parameters<typeof basePrisma.withdrawal.update>[0]["where"],
             data: { deletedAt: new Date() },
           });
     case "Application":

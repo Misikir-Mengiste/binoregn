@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { sanitizeHtml } from "@/lib/sanitize-html";
+import { TRUST_BADGE_COUNT, TRUST_BADGE_MAX_LENGTH } from "@/lib/product-badges";
+import { normalizeDiscountCode } from "@/lib/discount";
 
 // imageUrls stores plain URL/path strings — either a local `/uploads/...`
 // path written by POST /api/admin/uploads, or an external http(s) URL
@@ -17,7 +20,9 @@ const imageRef = z
 
 export const createProductSchema = z.object({
   name: z.string().trim().min(1).max(200),
-  description: z.string().trim().max(50000).optional(),
+  // Stored already cleaned (lib/sanitize-html.ts), so pasted website
+  // styling never reaches the database. Limit applies to the raw input.
+  description: z.string().trim().max(50000).transform(sanitizeHtml).optional(),
   category: z.string().trim().min(1).max(120).optional(),
   subCategory: z.string().trim().min(1).max(120).optional(),
   features: z.array(z.string().trim().min(1).max(200)).default([]),
@@ -28,6 +33,17 @@ export const createProductSchema = z.object({
   sizes: z.array(z.string().trim().min(1).max(50)).default([]),
   priceBirr: z.number().int().positive(),
   compareAtBirr: z.number().int().positive().optional(),
+  // Creator discount (lib/discount.ts). Cross-field rules (needs code +
+  // amount when on, amount < price) are checked in the routes with
+  // discountSettingsProblem, since an edit may send only some fields.
+  discountEnabled: z.boolean().optional(),
+  discountBirr: z.number().int().positive().nullable().optional(),
+  discountCode: z
+    .string()
+    .max(40)
+    .transform((value) => normalizeDiscountCode(value) || null)
+    .nullable()
+    .optional(),
   rating: z.number().min(0).max(5).optional(),
   ratingCount: z.number().int().nonnegative().optional(),
   soldCount: z.number().int().nonnegative().optional(),
@@ -43,6 +59,13 @@ export const createProductSchema = z.object({
   imageUrls: z.array(imageRef).default([]),
   stock: z.number().int().nonnegative().default(100),
   isPublished: z.boolean().default(true),
+  // Badges under Buy Now — always four entries; "" hides one.
+  trustBadges: z
+    .array(z.string().trim().max(TRUST_BADGE_MAX_LENGTH))
+    .length(TRUST_BADGE_COUNT)
+    .optional(),
+  // Creator limit; null clears it (unlimited). See lib/promotion.ts.
+  maxCreators: z.number().int().positive().max(100000).nullable().optional(),
 });
 
 export const updateProductSchema = createProductSchema.partial();

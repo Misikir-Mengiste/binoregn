@@ -1,10 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Eye, Link2, MousePointerClick, PackageCheck } from "lucide-react";
 import { CopyButton } from "@/components/copy-button";
 import { SearchInput } from "@/components/search-input";
 import { Pagination } from "@/components/pagination";
 import { CreatorStatCard } from "@/components/creator-stat-card";
+import { affiliateLinkPath } from "@/lib/affiliate-link-path";
+import { shortProductName } from "@/lib/short-name";
 
 type LinkRow = {
   slug: string;
@@ -19,13 +22,17 @@ type LinkRow = {
 
 const PAGE_SIZE = 8;
 
+// Delivered orders ÷ link views, one decimal ("—" before any views).
+function conversionRate(orders: number, views: number) {
+  if (views === 0) return "—";
+  return `${((orders / views) * 100).toFixed(1)}%`;
+}
+
 export function LinksListClient({
   links: allLinks,
-  creatorSlug,
   totals,
 }: {
   links: LinkRow[];
-  creatorSlug: string;
   totals: { links: number; views: number; orders: number };
 }) {
   const [query, setQuery] = useState("");
@@ -44,21 +51,31 @@ export function LinksListClient({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <CreatorStatCard
-          value={totals.links.toLocaleString()}
+          icon={Link2}
           label="Active links"
-          bg="bg-teal-100"
+          value={totals.links.toLocaleString("en-US")}
+          tint="bg-teal-100 text-teal-700"
         />
         <CreatorStatCard
-          value={totals.views.toLocaleString()}
-          label="Total link views"
-          bg="bg-blue-100"
+          icon={Eye}
+          label="Link views"
+          value={totals.views.toLocaleString("en-US")}
+          tint="bg-blue-100 text-blue-700"
         />
         <CreatorStatCard
-          value={totals.orders.toLocaleString()}
-          label="Total orders"
-          bg="bg-mint-100"
+          icon={PackageCheck}
+          label="Delivered orders"
+          value={totals.orders.toLocaleString("en-US")}
+          tint="bg-mint-100 text-mint-500"
+        />
+        <CreatorStatCard
+          icon={MousePointerClick}
+          label="Conversion rate"
+          value={conversionRate(totals.orders, totals.views)}
+          caption="Orders per 100 views"
+          tint="bg-peach-100 text-peach-700"
         />
       </div>
 
@@ -106,25 +123,19 @@ export function LinksListClient({
                             <div className="h-full w-full bg-teal-100" />
                           )}
                         </div>
-                        <div>
-                          <p className="font-semibold text-foreground">
-                            {link.product.name}
-                          </p>
-                          <p className="text-xs text-ink-400">
-                            Earn {link.product.commissionBirr.toLocaleString()}{" "}
-                            ETB per completed order
-                          </p>
-                        </div>
+                        <p className="font-semibold text-foreground">
+                          <span title={link.product.name}>{shortProductName(link.product.name)}</span>
+                        </p>
                       </div>
                     </td>
                     <td className="px-5 py-3 text-ink-600">
-                      {link.viewCount.toLocaleString()}
+                      {link.viewCount.toLocaleString("en-US")}
                     </td>
                     <td className="px-5 py-3 text-ink-600">
-                      {link.orderCount.toLocaleString()}
+                      {link.orderCount.toLocaleString("en-US")}
                     </td>
                     <td className="px-5 py-3 text-right">
-                      <CopyButton path={`/p/${creatorSlug}/${link.slug}`} />
+                      <CopyButton path={affiliateLinkPath(link.slug)} />
                     </td>
                   </tr>
                 ))}
