@@ -17,8 +17,10 @@ echo "    $(git --git-dir="$REPO" log --oneline -1 main)"
 
 echo "==> Backing up the database"
 mkdir -p "$HOME/backups"
-set -a; . "$APP/.env"; set +a
-pg_dump "${DATABASE_URL%%\?*}" | gzip > "$HOME/backups/pre-deploy-$(date +%Y%m%d-%H%M%S).sql.gz"
+# Read only DATABASE_URL — don't `source` .env: values such as passwords
+# may contain $ or other characters the shell would expand.
+DB_URL=$(grep -E '^DATABASE_URL=' "$APP/.env" | head -1 | sed -E 's/^DATABASE_URL=//; s/^"//; s/"$//')
+pg_dump "${DB_URL%%\?*}" | gzip > "$HOME/backups/pre-deploy-$(date +%Y%m%d-%H%M%S).sql.gz"
 
 echo "==> Installing dependencies"
 npm ci --no-audit --no-fund
