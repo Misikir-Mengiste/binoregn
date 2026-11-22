@@ -15,8 +15,8 @@ serving https://binoregn.com.
 | Web | nginx (`deploy/nginx-binoregn.conf`) → HTTPS by Let's Encrypt (auto-renews) |
 | Database | PostgreSQL 16, database + role `binoregn`, localhost only |
 | Firewall | ufw: only 22 (SSH), 80, 443 |
-| Backups | daily `pg_dump` at 02:00 (kept 14 days) + one before every deploy, in `/home/binoregn/backups` |
-| Cron | Friday payout reminder → `GET /api/cron/payout-reminder` (Fri 06:00 UTC = 09:00 Addis) |
+| Backups | daily `pg_dump` at 02:00 server time (kept 14 days) + one before every deploy, in `/home/binoregn/backups` |
+| Cron | Friday payout reminder → `GET /api/cron/payout-reminder`, once at Fri 09:00 Addis Ababa (`~/bin/payout-reminder.sh` runs hourly Thu/Fri and checks Addis time itself — the server clock is Europe/Berlin with daylight saving) |
 | Canonical host | `www` and `http://` redirect to `https://binoregn.com` |
 | Telegram | webhook `https://binoregn.com/api/telegram/webhook` (`npm run telegram:webhook -- https://binoregn.com`) |
 
