@@ -41,6 +41,8 @@
 
 **Link views (`AffiliateLink.viewCount`)** count at most once per visitor per 24h. The `/r/[slug]` page reports a view from the browser (`LinkViewBeacon`, so crawlers and link previews never count) to `POST /api/public/links/[slug]/view`, which identifies the visitor by a random id in the `bv` cookie and records the last counted time in `LinkVisit` (unique per link + visitor; atomic insert-or-update guarded by the 24h cutoff). Views are stats only — never commission-relevant.
 
+**Commission amount = the product's per-item `commissionBirr` × the order's `quantity`** (snapshotted when the order is delivered; discounts never reduce it).
+
 **Commission creation** (`lib/commission`) runs in one transaction: the commission row (unique per order) is inserted first, then stock is decremented atomically, so concurrent "Delivered" requests create one commission and deduct stock once. Once a commission exists, the order's fulfillment/delivery status and cash reconciliation are locked.
 
 **Display formatting:** numbers use `toLocaleString("en-US")` and dates `formatDate()` (`lib/format.ts`, Addis Ababa time) — never the device locale, so server HTML and phones render identical text (hydration).

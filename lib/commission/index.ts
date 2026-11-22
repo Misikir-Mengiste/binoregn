@@ -45,7 +45,9 @@ export async function maybeCreateCommission(orderId: string) {
         data: {
           orderId: order.id,
           creatorId: order.creatorId,
-          amountBirr: order.product.commissionBirr,
+          // Per-item commission × items in the order (snapshotted now, so
+          // later product edits never change it).
+          amountBirr: order.product.commissionBirr * order.quantity,
           status: "PENDING",
         },
       });

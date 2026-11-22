@@ -19,7 +19,7 @@ function notifyApproved(application: {
   return notifyCreator(application.creatorId, {
     type: "REQUEST_APPROVED",
     title: `Approved: ${application.product.name}`,
-    body: `Your link is ready. You earn ${birrText(application.product.commissionBirr)} per delivered sale.`,
+    body: `Your link is ready. You earn ${birrText(application.product.commissionBirr)} for every item delivered.`,
     href: `/creator/products/${application.productId}`,
   });
 }

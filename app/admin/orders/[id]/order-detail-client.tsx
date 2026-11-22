@@ -285,7 +285,7 @@ export function OrderDetailClient({ order }: { order: OrderDetail }) {
               <div>
                 <dt className="text-xs text-ink-400">Creator commission</dt>
                 <dd className="font-semibold text-foreground">
-                  {(order.commission?.amountBirr ?? order.product.commissionBirr).toLocaleString("en-US")} ETB
+                  {(order.commission?.amountBirr ?? order.product.commissionBirr * values.quantity).toLocaleString("en-US")} ETB
                 </dd>
               </div>
               <div>
@@ -525,7 +525,7 @@ export function OrderDetailClient({ order }: { order: OrderDetail }) {
                 <p className="text-ink-600">No commission for this order.</p>
               ) : (
                 <p className="text-ink-600">
-                  Earns <span className="font-semibold text-foreground">{order.product.commissionBirr.toLocaleString("en-US")} ETB</span> once delivered.
+                  Earns <span className="font-semibold text-foreground">{(order.product.commissionBirr * values.quantity).toLocaleString("en-US")} ETB</span>{values.quantity > 1 ? ` (${order.product.commissionBirr.toLocaleString("en-US")} × ${values.quantity})` : ""} once delivered.
                 </p>
               )}
             </div>

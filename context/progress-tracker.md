@@ -52,6 +52,12 @@ change.
 
 - **2026-11-12 — Orders table + dashboard background.** Orders table: Delivery and Payment columns replaced by one Fulfillment column (order stage pill); product names cut to 24 chars with the full name as a tooltip; even cell padding (20px edges, 12px between) via row-level classes; table min width 760px; responsive title/stat sizes. Admin + creator dashboards: white content area, sidebars on a new light-grey token `--surface-50` (#f8f9fa) with a white bordered active item and white hover (user reference). Shared PageHeader title 22px on phones, 28px from sm. Verified no horizontal overflow on every admin and creator page at 375/768/1280.
 
+- **2026-11-23 — Commission × quantity.** A delivered order now earns the
+  creator `commissionBirr × quantity` (was one commission per order
+  regardless of items). Admin order page shows the multiplied amount (and
+  "800 × 3"); request-approved message says "for every item delivered".
+  Tested locally: 3 items × 800 → 2,400.
+
 - **2026-11-22 — Production deploy (Contabo Cloud VPS 4, 62.169.29.172).**
   Ubuntu 24.04, Node 22, PostgreSQL 16 (localhost only, fresh DB + admin
   binoregn@gmail.com), nginx + Let's Encrypt (auto-renew tested), ufw
