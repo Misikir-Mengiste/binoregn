@@ -8,9 +8,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Binoregn: affiliate marketplace for creators",
+  title: "Binoregn",
   description:
-    "Turn your influence into affiliate income. Promote products, share your link, and earn a fixed commission on every delivered order.",
+    "Discover products recommended by creators. Explore, find what you love, and shop with ease.",
   // iPhone browsers otherwise turn phone numbers, dates and addresses in
   // the page into links before React loads — that changes the text and
   // fails hydration (seen on the admin orders list and order pages).
