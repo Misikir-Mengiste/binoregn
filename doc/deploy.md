@@ -16,7 +16,9 @@ serving https://binoregn.com.
 | Database | PostgreSQL 16, database + role `binoregn`, localhost only |
 | Firewall | ufw: only 22 (SSH), 80, 443 |
 | Backups | daily `pg_dump` at 02:00 (kept 14 days) + one before every deploy, in `/home/binoregn/backups` |
-| Cron | Friday payout reminder → `GET /api/cron/payout-reminder` |
+| Cron | Friday payout reminder → `GET /api/cron/payout-reminder` (Fri 06:00 UTC = 09:00 Addis) |
+| Canonical host | `www` and `http://` redirect to `https://binoregn.com` |
+| Telegram | webhook `https://binoregn.com/api/telegram/webhook` (`npm run telegram:webhook -- https://binoregn.com`) |
 
 ## Deploying an update
 

@@ -52,6 +52,16 @@ change.
 
 - **2026-11-12 — Orders table + dashboard background.** Orders table: Delivery and Payment columns replaced by one Fulfillment column (order stage pill); product names cut to 24 chars with the full name as a tooltip; even cell padding (20px edges, 12px between) via row-level classes; table min width 760px; responsive title/stat sizes. Admin + creator dashboards: white content area, sidebars on a new light-grey token `--surface-50` (#f8f9fa) with a white bordered active item and white hover (user reference). Shared PageHeader title 22px on phones, 28px from sm. Verified no horizontal overflow on every admin and creator page at 375/768/1280.
 
+- **2026-11-22 — Production deploy (Contabo Cloud VPS 4, 62.169.29.172).**
+  Ubuntu 24.04, Node 22, PostgreSQL 16 (localhost only, fresh DB + admin
+  binoregn@gmail.com), nginx + Let's Encrypt (auto-renew tested), ufw
+  22/80/443, app user `binoregn`, PM2 on boot (127.0.0.1:4000), nightly
+  backups + pre-deploy backups, Friday reminder cron, Telegram webhook on
+  https://binoregn.com, www→apex redirect. DNS A records moved from the old
+  server (149.102.140.160). Deploy: push to `vps` remote + `deploy/deploy.sh`
+  (doc/deploy.md). Verified: pages, access rules, dev OTP bypass off, SMTP
+  login from server, Google sign-in working (2 users signed in).
+
 - **2026-11-21 — Full health check + admin data-leak fix.** Scripted check
   (99 checks, real sign-in flow as admin/creator/buyer, test data only):
   auth, access control, every page, buyer order + discount, order
