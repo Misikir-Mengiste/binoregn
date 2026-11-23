@@ -6,7 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { CREATOR_CATEGORIES, CREATOR_PLATFORMS } from "@/lib/creator-options";
-import { sanitizeSocialHandleInput, socialHandleError } from "@/lib/social-handle";
+import {
+  PROFILE_LINK_EXAMPLE,
+  profileLinkError,
+  sanitizeProfileLinkInput,
+} from "@/lib/profile-link";
 
 type PayoutOptionRow = { category: "BANK" | "WALLET"; name: string };
 
@@ -179,15 +183,16 @@ export function CreatorSettingsForm({
             </div>
           </div>
           <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <Label htmlFor="profileUrl">Social media username</Label>
+            <Label htmlFor="profileUrl">Social media profile link</Label>
             <Input
               id="profileUrl"
               className="h-11 rounded-[10px]"
               value={form.profileUrl}
               onChange={(event) =>
-                updateField("profileUrl", sanitizeSocialHandleInput(event.target.value))
+                updateField("profileUrl", sanitizeProfileLinkInput(event.target.value))
               }
-              placeholder="@yourusername"
+              placeholder={PROFILE_LINK_EXAMPLE}
+              inputMode="url"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
@@ -195,13 +200,13 @@ export function CreatorSettingsForm({
             <p
               className={cn(
                 "text-xs",
-                form.profileUrl && socialHandleError(form.profileUrl)
+                form.profileUrl && profileLinkError(form.profileUrl)
                   ? "font-medium text-coral-500"
                   : "text-ink-400",
               )}
             >
-              {(form.profileUrl && socialHandleError(form.profileUrl)) ||
-                "Just your username, starting with @ — e.g. @abebe_creates."}
+              {(form.profileUrl && profileLinkError(form.profileUrl)) ||
+                `Copy the link from your profile page — e.g. ${PROFILE_LINK_EXAMPLE}`}
             </p>
           </div>
           <div className="flex flex-col gap-1.5 sm:col-span-2">

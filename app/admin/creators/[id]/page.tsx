@@ -26,7 +26,7 @@ import { shortProductName } from "@/lib/short-name";
 import { formatDate } from "@/lib/format";
 import { orderTotalBirr } from "@/lib/discount";
 import { requireAdminPage } from "@/lib/auth-helpers";
-import { socialProfileLink } from "@/lib/social-handle";
+import { profileLinkHref } from "@/lib/profile-link";
 
 const PAYOUT_METHOD_LABELS: Record<string, string> = {
   BANK_TRANSFER: "Bank transfer",
@@ -338,12 +338,12 @@ export default async function AdminCreatorDetailPage({
             <InfoRow label="Phone" value={creator.creatorPhone} />
             <InfoRow label="Platform" value={creator.creatorPlatform} />
             <InfoRow
-              label="Social media"
+              label="Profile link"
               value={
                 creator.creatorProfileUrl ? (
-                  socialProfileLink(creator.creatorPlatform, creator.creatorProfileUrl) ? (
+                  profileLinkHref(creator.creatorProfileUrl) ? (
                     <a
-                      href={socialProfileLink(creator.creatorPlatform, creator.creatorProfileUrl)!}
+                      href={profileLinkHref(creator.creatorProfileUrl)!}
                       target="_blank"
                       rel="noreferrer"
                       className="text-teal-700 underline"

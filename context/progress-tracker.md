@@ -52,6 +52,13 @@ change.
 
 - **2026-11-12 — Orders table + dashboard background.** Orders table: Delivery and Payment columns replaced by one Fulfillment column (order stage pill); product names cut to 24 chars with the full name as a tooltip; even cell padding (20px edges, 12px between) via row-level classes; table min width 760px; responsive title/stat sizes. Admin + creator dashboards: white content area, sidebars on a new light-grey token `--surface-50` (#f8f9fa) with a white bordered active item and white hover (user reference). Shared PageHeader title 22px on phones, 28px from sm. Verified no horizontal overflow on every admin and creator page at 375/768/1280.
 
+- **2026-11-23 — Social media: profile link instead of @username.** The
+  field is "Social media profile link" again (`lib/profile-link.ts`, replaces
+  `lib/social-handle.ts`): a real http(s) link; "https://" added if typed
+  without (tiktok.com/@x → https://tiktok.com/@x); a bare @username gets
+  "paste the full link". Same rule in sign-up, Settings and the API; admin
+  creator page shows it as a clickable "Profile link".
+
 - **2026-11-23 — Sign-up form checks + @username + sign-in only.** The
   4-step creator form checks each step on Continue (red message under each
   missing/wrong field, focus first; re-checked on submit): name, username,

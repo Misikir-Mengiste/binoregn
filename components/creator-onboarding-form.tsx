@@ -15,7 +15,12 @@ import {
   sanitizeUsernameInput,
   usernameError,
 } from "@/lib/username";
-import { sanitizeSocialHandleInput, socialHandleError } from "@/lib/social-handle";
+import {
+  PROFILE_LINK_EXAMPLE,
+  normalizeProfileLink,
+  profileLinkError,
+  sanitizeProfileLinkInput,
+} from "@/lib/profile-link";
 
 type PayoutOptionRow = { category: "BANK" | "WALLET"; name: string };
 
@@ -43,7 +48,7 @@ function stepErrors(step: number, form: FormState): FieldErrors {
   if (step === 2) {
     if (!form.displayName.trim()) e.displayName = "Enter your display name.";
     if (!form.platform) e.platform = "Choose your main platform.";
-    const h = socialHandleError(form.profileUrl);
+    const h = profileLinkError(form.profileUrl);
     if (h) e.profileUrl = h;
     if (!form.category) e.category = "Choose a content category.";
   }
@@ -381,15 +386,16 @@ export function CreatorOnboardingForm({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="profileUrl">Social media username</Label>
+            <Label htmlFor="profileUrl">Social media profile link</Label>
             <Input
               id="profileUrl"
               className={cn("h-12 rounded-[12px]", invalid("profileUrl"))}
               value={form.profileUrl}
               onChange={(event) =>
-                updateField("profileUrl", sanitizeSocialHandleInput(event.target.value))
+                updateField("profileUrl", sanitizeProfileLinkInput(event.target.value))
               }
-              placeholder="@yourusername"
+              placeholder={PROFILE_LINK_EXAMPLE}
+              inputMode="url"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
@@ -399,7 +405,7 @@ export function CreatorOnboardingForm({
               <FieldError message={err("profileUrl")} />
             ) : (
               <p className="text-xs text-ink-400">
-                Just your username, starting with @ — e.g. @abebe_creates.
+                Copy the link from your profile page — e.g. {PROFILE_LINK_EXAMPLE}
               </p>
             )}
           </div>
@@ -646,8 +652,10 @@ export function CreatorOnboardingForm({
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between">
-                <span>Social media</span>
-                <span className="font-semibold text-foreground">{form.profileUrl}</span>
+                <span>Profile link</span>
+                <span className="min-w-0 truncate pl-3 font-semibold text-foreground">
+                  {normalizeProfileLink(form.profileUrl)}
+                </span>
               </div>
               <div className="mt-2 flex items-center justify-between">
                 <span>Category</span>
