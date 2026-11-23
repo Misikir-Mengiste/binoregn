@@ -16,14 +16,13 @@ type Variant = "sign-in" | "sign-up";
 
 const VARIANT_COPY: Record<
   Variant,
-  { title: string; description: string; helper: string; linkHref: string; linkText: string }
+  { title: string; description: string; helper?: string; linkHref?: string; linkText?: string }
 > = {
   "sign-in": {
     title: "Welcome back",
+    // No "Sign up" link: signing in with a new email or Google account
+    // creates the account, so sign-in is the single entry point.
     description: "Continue with Google or receive a 6-digit email code.",
-    helper: "New here?",
-    linkHref: "/sign-up",
-    linkText: "Sign up",
   },
   "sign-up": {
     title: "Create your account",
@@ -282,15 +281,17 @@ export function AuthEntry({ variant }: { variant: Variant }) {
               <p className="text-xs text-ink-600">
                 We&apos;ll send a 6-digit code. No password needed.
               </p>
-              <p className="text-sm text-ink-600">
-                {copy.helper}{" "}
-                <Link
-                  href={copy.linkHref}
-                  className="font-medium text-teal-600 underline underline-offset-2"
-                >
-                  {copy.linkText}
-                </Link>
-              </p>
+              {copy.linkHref ? (
+                <p className="text-sm text-ink-600">
+                  {copy.helper}{" "}
+                  <Link
+                    href={copy.linkHref}
+                    className="font-medium text-teal-600 underline underline-offset-2"
+                  >
+                    {copy.linkText}
+                  </Link>
+                </p>
+              ) : null}
             </form>
           </div>
         )}

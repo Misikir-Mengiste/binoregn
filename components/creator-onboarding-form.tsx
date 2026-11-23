@@ -15,8 +15,67 @@ import {
   sanitizeUsernameInput,
   usernameError,
 } from "@/lib/username";
+import { sanitizeSocialHandleInput, socialHandleError } from "@/lib/social-handle";
 
 type PayoutOptionRow = { category: "BANK" | "WALLET"; name: string };
+
+type FieldErrors = Partial<Record<keyof FormState, string>>;
+
+// Ethiopian mobile number after +251: 9 digits starting 9 or 7. A leading 0
+// ("0911…") is accepted and dropped.
+function localPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits.length === 10 && digits.startsWith("0") ? digits.slice(1) : digits;
+}
+const PHONE_ERROR = "Enter your 9-digit phone number after +251, e.g. 911223344.";
+const isPhone = (value: string) => /^[79]\d{8}$/.test(localPhone(value));
+
+// What's missing or wrong on one step (empty object = OK to continue).
+function stepErrors(step: number, form: FormState): FieldErrors {
+  const e: FieldErrors = {};
+  if (step === 1) {
+    if (form.fullName.trim().length < 2) e.fullName = "Enter your full name.";
+    const u = usernameError(form.username);
+    if (u) e.username = u;
+    if (!form.phone.trim()) e.phone = "Enter your phone number.";
+    else if (!isPhone(form.phone)) e.phone = PHONE_ERROR;
+  }
+  if (step === 2) {
+    if (!form.displayName.trim()) e.displayName = "Enter your display name.";
+    if (!form.platform) e.platform = "Choose your main platform.";
+    const h = socialHandleError(form.profileUrl);
+    if (h) e.profileUrl = h;
+    if (!form.category) e.category = "Choose a content category.";
+  }
+  if (step === 3) {
+    if (form.payoutMethod === "TELEBIRR") {
+      if (!form.telebirrPhone.trim()) e.telebirrPhone = "Enter the phone number for payouts.";
+      else if (!isPhone(form.telebirrPhone)) e.telebirrPhone = PHONE_ERROR;
+    } else {
+      if (!form.bankName) e.bankName = "Choose your bank.";
+      if (form.bankAccountName.trim().length < 2) e.bankAccountName = "Enter the account holder name.";
+      if (!form.bankAccountNumber.trim()) e.bankAccountNumber = "Enter your account number.";
+      else if (!/^\d{4,30}$/.test(form.bankAccountNumber.trim())) e.bankAccountNumber = "Account number: numbers only.";
+    }
+  }
+  return e;
+}
+
+// Field order per step, for focusing the first problem.
+const STEP_FIELDS: Record<number, (keyof FormState)[]> = {
+  1: ["fullName", "username", "phone"],
+  2: ["displayName", "platform", "profileUrl", "category"],
+  3: ["telebirrPhone", "bankName", "bankAccountName", "bankAccountNumber"],
+};
+
+function FieldError({ id, message }: { id?: string; message?: string }) {
+  if (!message) return null;
+  return (
+    <p id={id} className="text-xs font-medium text-coral-500">
+      {message}
+    </p>
+  );
+}
 
 type FormState = {
   fullName: string;
@@ -60,7 +119,41 @@ export function CreatorOnboardingForm({
   });
   // Only show the username error once they've typed or tried to continue.
   const [usernameTouched, setUsernameTouched] = useState(false);
-  const usernameProblem = usernameError(form.username);
+  // Steps where Continue was pressed — their errors show (and update live).
+  const [checkedSteps, setCheckedSteps] = useState<number[]>([]);
+  const errors = stepErrors(step, form);
+  const showErrors = checkedSteps.includes(step);
+  const err = (field: keyof FormState) =>
+    field === "username"
+      ? usernameTouched || showErrors
+        ? errors.username
+        : undefined
+      : showErrors
+        ? errors[field]
+        : undefined;
+  const invalid = (field: keyof FormState) =>
+    err(field) ? "border-coral-500 focus-visible:ring-coral-500/30" : "";
+
+  function focusField(field: keyof FormState) {
+    const el = document.getElementById(field) as HTMLElement | null;
+    el?.focus();
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
+  // Continue: only move on when this step is complete; otherwise show
+  // every problem on it and jump to the first one.
+  function goNext() {
+    const current = stepErrors(step, form);
+    const firstBad = STEP_FIELDS[step]?.find((field) => current[field]);
+    if (firstBad) {
+      setCheckedSteps((done) => (done.includes(step) ? done : [...done, step]));
+      if (firstBad === "username") setUsernameTouched(true);
+      focusField(firstBad);
+      return;
+    }
+    setStep(step + 1);
+    window.scrollTo({ top: 0 });
+  }
   const [bankOptions, setBankOptions] = useState<string[]>([]);
   const [walletOptions, setWalletOptions] = useState<string[]>([]);
 
@@ -93,19 +186,30 @@ export function CreatorOnboardingForm({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    // Re-check every step (in case something changed since).
+    for (const s of [1, 2, 3]) {
+      const problems = stepErrors(s, form);
+      const firstBad = STEP_FIELDS[s].find((field) => problems[field]);
+      if (firstBad) {
+        setCheckedSteps((done) => (done.includes(s) ? done : [...done, s]));
+        setStep(s);
+        setTimeout(() => focusField(firstBad), 0);
+        return;
+      }
+    }
     setLoading(true);
     try {
       const payload = {
         fullName: form.fullName.trim(),
         username: normalizeUsername(form.username),
-        phone: `+251${form.phone.trim()}`,
+        phone: `+251${localPhone(form.phone)}`,
         displayName: form.displayName.trim(),
         platform: form.platform,
         profileUrl: form.profileUrl.trim(),
         category: form.category.toUpperCase(),
         payoutMethod: form.payoutMethod,
         telebirrPhone:
-          form.payoutMethod === "TELEBIRR" ? `+251${form.telebirrPhone.trim()}` : undefined,
+          form.payoutMethod === "TELEBIRR" ? `+251${localPhone(form.telebirrPhone)}` : undefined,
         bankName: form.payoutMethod === "BANK_TRANSFER" ? form.bankName.trim() : undefined,
         bankAccountName:
           form.payoutMethod === "BANK_TRANSFER"
@@ -164,17 +268,19 @@ export function CreatorOnboardingForm({
             <Label htmlFor="fullName">Full name</Label>
             <Input
               id="fullName"
-              className="h-12 rounded-[12px]"
+              className={cn("h-12 rounded-[12px]", invalid("fullName"))}
               value={form.fullName}
               onChange={(event) => updateField("fullName", event.target.value)}
               placeholder="Abebe Bekele"
+              aria-invalid={Boolean(err("fullName"))}
             />
+            <FieldError message={err("fullName")} />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="username">Username</Label>
             <Input
               id="username"
-              className="h-12 rounded-[12px]"
+              className={cn("h-12 rounded-[12px]", invalid("username"))}
               value={form.username}
               onChange={(event) => {
                 setUsernameTouched(true);
@@ -184,13 +290,11 @@ export function CreatorOnboardingForm({
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              aria-invalid={usernameTouched && usernameProblem !== null}
+              aria-invalid={Boolean(err("username"))}
               aria-describedby="username-help"
             />
-            {usernameTouched && usernameProblem ? (
-              <p id="username-help" className="text-xs font-medium text-coral-500">
-                {usernameProblem}
-              </p>
+            {err("username") ? (
+              <FieldError id="username-help" message={err("username")} />
             ) : (
               <p id="username-help" className="text-xs text-ink-400">
                 {USERNAME_HINT}. This is how brands will find you.
@@ -205,25 +309,24 @@ export function CreatorOnboardingForm({
               </div>
               <Input
                 id="phone"
-                className="h-12 rounded-[12px]"
+                type="tel"
+                inputMode="numeric"
+                className={cn("h-12 rounded-[12px]", invalid("phone"))}
                 value={form.phone}
-                onChange={(event) => updateField("phone", event.target.value)}
+                onChange={(event) =>
+                  updateField("phone", event.target.value.replace(/\D/g, "").slice(0, 10))
+                }
                 placeholder="911223344"
+                aria-invalid={Boolean(err("phone"))}
               />
             </div>
+            <FieldError message={err("phone")} />
           </div>
 
           <Button
             type="button"
             className="h-12 rounded-[14px]"
-            onClick={() => {
-              if (usernameProblem) {
-                setUsernameTouched(true);
-                document.getElementById("username")?.focus();
-                return;
-              }
-              setStep(2);
-            }}
+            onClick={goNext}
           >
             Continue
             <MoveRight className="ml-2 h-4 w-4" />
@@ -242,51 +345,76 @@ export function CreatorOnboardingForm({
             <Label htmlFor="displayName">Display name</Label>
             <Input
               id="displayName"
-              className="h-12 rounded-[12px]"
+              className={cn("h-12 rounded-[12px]", invalid("displayName"))}
               value={form.displayName}
               onChange={(event) => updateField("displayName", event.target.value)}
               placeholder="Abebe Creates"
+              aria-invalid={Boolean(err("displayName"))}
             />
-            <p className="text-xs text-ink-400">The public name shown on your creator profile.</p>
+            {err("displayName") ? (
+              <FieldError message={err("displayName")} />
+            ) : (
+              <p className="text-xs text-ink-400">The public name shown on your creator profile.</p>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
             <Label>Primary platform</Label>
             <div className="grid grid-cols-2 gap-2">
-              {CREATOR_PLATFORMS.map((option) => (
+              {CREATOR_PLATFORMS.map((option, index) => (
                 <button
                   key={option.value}
+                  id={index === 0 ? "platform" : undefined}
                   type="button"
                   onClick={() => updateField("platform", option.value)}
                   className={cn(
                     "h-11 rounded-[12px] border border-border text-sm font-semibold text-ink-600",
                     form.platform === option.value && "border-teal-600 bg-teal-100 text-teal-700",
+                    err("platform") && "border-coral-500",
                   )}
                 >
                   {option.label}
                 </button>
               ))}
             </div>
+            <FieldError message={err("platform")} />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="profileUrl">Profile URL</Label>
+            <Label htmlFor="profileUrl">Social media username</Label>
             <Input
               id="profileUrl"
-              className="h-12 rounded-[12px]"
+              className={cn("h-12 rounded-[12px]", invalid("profileUrl"))}
               value={form.profileUrl}
-              onChange={(event) => updateField("profileUrl", event.target.value)}
-              placeholder="https://tiktok.com/@yourhandle"
+              onChange={(event) =>
+                updateField("profileUrl", sanitizeSocialHandleInput(event.target.value))
+              }
+              placeholder="@yourusername"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              aria-invalid={Boolean(err("profileUrl"))}
             />
+            {err("profileUrl") ? (
+              <FieldError message={err("profileUrl")} />
+            ) : (
+              <p className="text-xs text-ink-400">
+                Just your username, starting with @ — e.g. @abebe_creates.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="category">Content category</Label>
             <select
               id="category"
-              className="h-12 rounded-[12px] border border-border bg-card px-3 text-sm text-foreground"
+              className={cn(
+                "h-12 rounded-[12px] border border-border bg-card px-3 text-sm text-foreground",
+                invalid("category"),
+              )}
               value={form.category}
               onChange={(event) => updateField("category", event.target.value)}
+              aria-invalid={Boolean(err("category"))}
             >
               <option value="">Select a category</option>
               {CREATOR_CATEGORIES.map((option) => (
@@ -295,6 +423,7 @@ export function CreatorOnboardingForm({
                 </option>
               ))}
             </select>
+            <FieldError message={err("category")} />
           </div>
 
           <div className="flex items-center gap-3">
@@ -309,7 +438,7 @@ export function CreatorOnboardingForm({
             <Button
               type="button"
               className="h-12 flex-[2] rounded-[14px]"
-              onClick={() => setStep(3)}
+              onClick={goNext}
             >
               Continue
               <MoveRight className="ml-2 h-4 w-4" />
@@ -375,12 +504,21 @@ export function CreatorOnboardingForm({
                 </div>
                 <Input
                   id="telebirrPhone"
-                  className="h-12 rounded-[12px]"
+                  type="tel"
+                  inputMode="numeric"
+                  className={cn("h-12 rounded-[12px]", invalid("telebirrPhone"))}
                   value={form.telebirrPhone}
-                  onChange={(event) => updateField("telebirrPhone", event.target.value)}
+                  onChange={(event) =>
+                    updateField(
+                      "telebirrPhone",
+                      event.target.value.replace(/\D/g, "").slice(0, 10),
+                    )
+                  }
                   placeholder="911223344"
+                  aria-invalid={Boolean(err("telebirrPhone"))}
                 />
               </div>
+              <FieldError message={err("telebirrPhone")} />
             </div>
           ) : (
             <div className="flex flex-col gap-4">
@@ -388,9 +526,13 @@ export function CreatorOnboardingForm({
                 <Label htmlFor="bankName">Bank name</Label>
                 <select
                   id="bankName"
-                  className="h-12 rounded-[12px] border border-border bg-card px-3 text-sm text-foreground"
+                  className={cn(
+                    "h-12 rounded-[12px] border border-border bg-card px-3 text-sm text-foreground",
+                    invalid("bankName"),
+                  )}
                   value={form.bankName}
                   onChange={(event) => updateField("bankName", event.target.value)}
+                  aria-invalid={Boolean(err("bankName"))}
                 >
                   <option value="">Select your bank</option>
                   {bankOptions.map((option) => (
@@ -399,26 +541,34 @@ export function CreatorOnboardingForm({
                     </option>
                   ))}
                 </select>
+                <FieldError message={err("bankName")} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="bankAccountName">Account holder name</Label>
                 <Input
                   id="bankAccountName"
-                  className="h-12 rounded-[12px]"
+                  className={cn("h-12 rounded-[12px]", invalid("bankAccountName"))}
                   value={form.bankAccountName}
                   onChange={(event) => updateField("bankAccountName", event.target.value)}
                   placeholder="Abebe Bekele"
+                  aria-invalid={Boolean(err("bankAccountName"))}
                 />
+                <FieldError message={err("bankAccountName")} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="bankAccountNumber">Account number</Label>
                 <Input
                   id="bankAccountNumber"
-                  className="h-12 rounded-[12px]"
+                  inputMode="numeric"
+                  className={cn("h-12 rounded-[12px]", invalid("bankAccountNumber"))}
                   value={form.bankAccountNumber}
-                  onChange={(event) => updateField("bankAccountNumber", event.target.value)}
+                  onChange={(event) =>
+                    updateField("bankAccountNumber", event.target.value.replace(/\s+/g, ""))
+                  }
                   placeholder="1000123456789"
+                  aria-invalid={Boolean(err("bankAccountNumber"))}
                 />
+                <FieldError message={err("bankAccountNumber")} />
               </div>
             </div>
           )}
@@ -435,7 +585,7 @@ export function CreatorOnboardingForm({
             <Button
               type="button"
               className="h-12 flex-[2] rounded-[14px]"
-              onClick={() => setStep(4)}
+              onClick={goNext}
             >
               Continue
               <MoveRight className="ml-2 h-4 w-4" />
@@ -471,7 +621,7 @@ export function CreatorOnboardingForm({
               </div>
               <div className="mt-2 flex items-center justify-between">
                 <span>Phone</span>
-                <span className="font-semibold text-foreground">+251 {form.phone}</span>
+                <span className="font-semibold text-foreground">+251 {localPhone(form.phone)}</span>
               </div>
             </div>
           </div>
@@ -496,7 +646,7 @@ export function CreatorOnboardingForm({
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between">
-                <span>Profile</span>
+                <span>Social media</span>
                 <span className="font-semibold text-foreground">{form.profileUrl}</span>
               </div>
               <div className="mt-2 flex items-center justify-between">
@@ -524,7 +674,7 @@ export function CreatorOnboardingForm({
                 <div className="mt-2 flex items-center justify-between">
                   <span>Telebirr</span>
                   <span className="font-semibold text-foreground">
-                    +251 {form.telebirrPhone}
+                    +251 {localPhone(form.telebirrPhone)}
                   </span>
                 </div>
               ) : (

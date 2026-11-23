@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { CREATOR_CATEGORIES, CREATOR_PLATFORMS } from "@/lib/creator-options";
+import { sanitizeSocialHandleInput, socialHandleError } from "@/lib/social-handle";
 
 type PayoutOptionRow = { category: "BANK" | "WALLET"; name: string };
 
@@ -178,13 +179,30 @@ export function CreatorSettingsForm({
             </div>
           </div>
           <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <Label htmlFor="profileUrl">Profile URL</Label>
+            <Label htmlFor="profileUrl">Social media username</Label>
             <Input
               id="profileUrl"
               className="h-11 rounded-[10px]"
               value={form.profileUrl}
-              onChange={(event) => updateField("profileUrl", event.target.value)}
+              onChange={(event) =>
+                updateField("profileUrl", sanitizeSocialHandleInput(event.target.value))
+              }
+              placeholder="@yourusername"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
             />
+            <p
+              className={cn(
+                "text-xs",
+                form.profileUrl && socialHandleError(form.profileUrl)
+                  ? "font-medium text-coral-500"
+                  : "text-ink-400",
+              )}
+            >
+              {(form.profileUrl && socialHandleError(form.profileUrl)) ||
+                "Just your username, starting with @ — e.g. @abebe_creates."}
+            </p>
           </div>
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label htmlFor="category">Content category</Label>

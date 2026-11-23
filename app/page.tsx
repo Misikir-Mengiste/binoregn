@@ -31,7 +31,6 @@ const FOOTER_COLS: { title: string; links: { label: string; href: string }[] }[]
     {
       title: "Account",
       links: [
-        { label: "Create account", href: "/sign-up" },
         { label: "Sign in", href: "/sign-in" },
       ],
     },
@@ -158,7 +157,7 @@ export default function Home() {
                 Sign in
               </Link>
               <Link
-                href="/sign-up"
+                href="/sign-in"
                 className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-teal-700 transition-transform hover:-translate-y-0.5"
               >
                 Get started
@@ -182,7 +181,7 @@ export default function Home() {
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <Link
-                href="/sign-up"
+                href="/sign-in"
                 className="group inline-flex items-center gap-3 rounded-full bg-white py-2 pl-6 pr-2 text-sm font-semibold text-teal-700"
               >
                 Get started
@@ -487,7 +486,7 @@ export default function Home() {
               recommend, and always know exactly what you&apos;ll be paid.
             </p>
             <Link
-              href="/sign-up"
+              href="/sign-in"
               className="mt-8 inline-flex items-center gap-3 rounded-full bg-teal-600 py-2 pl-6 pr-2 text-sm font-semibold text-white"
             >
               Create your account
@@ -535,7 +534,7 @@ export default function Home() {
           </p>
           <div className="relative mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link
-              href="/sign-up"
+              href="/sign-in"
               className="group inline-flex items-center gap-3 rounded-full bg-white py-2 pl-6 pr-2 text-sm font-semibold text-teal-700"
             >
               Get started free
@@ -565,7 +564,7 @@ export default function Home() {
                 order.
               </p>
               <Link
-                href="/sign-up"
+                href="/sign-in"
                 className="mt-6 inline-flex items-center gap-3 rounded-full bg-teal-600 py-2 pl-5 pr-2 text-sm font-semibold text-white"
               >
                 Get started

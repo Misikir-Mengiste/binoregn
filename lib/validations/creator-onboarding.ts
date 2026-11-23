@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalizeUsername, usernameError } from "@/lib/username";
+import { socialHandleError } from "@/lib/social-handle";
 
 // Everything a creator profile has except the username (Settings can't
 // change the username, so it isn't validated or saved there).
@@ -15,7 +16,15 @@ const profileFields = z.object({
     "TELEGRAM",
     "OTHER",
   ]),
-  profileUrl: z.string().trim().url().max(300),
+  // Social media username, "@handle" only (lib/social-handle.ts). Field
+  // name kept as profileUrl for the existing column/API.
+  profileUrl: z
+    .string()
+    .trim()
+    .superRefine((value, ctx) => {
+      const message = socialHandleError(value);
+      if (message) ctx.addIssue({ code: "custom", message });
+    }),
   category: z.enum([
     "TECH",
     "FASHION",

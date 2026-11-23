@@ -52,6 +52,18 @@ change.
 
 - **2026-11-12 — Orders table + dashboard background.** Orders table: Delivery and Payment columns replaced by one Fulfillment column (order stage pill); product names cut to 24 chars with the full name as a tooltip; even cell padding (20px edges, 12px between) via row-level classes; table min width 760px; responsive title/stat sizes. Admin + creator dashboards: white content area, sidebars on a new light-grey token `--surface-50` (#f8f9fa) with a white bordered active item and white hover (user reference). Shared PageHeader title 22px on phones, 28px from sm. Verified no horizontal overflow on every admin and creator page at 375/768/1280.
 
+- **2026-11-23 — Sign-up form checks + @username + sign-in only.** The
+  4-step creator form checks each step on Continue (red message under each
+  missing/wrong field, focus first; re-checked on submit): name, username,
+  phone (9 digits after +251, leading 0 dropped); display name, platform,
+  social media, category; Telebirr phone or bank/name/account number.
+  "Profile URL" → "Social media username": must start with @
+  (`lib/social-handle.ts`; letters/numbers/._- ; links rejected) in the form,
+  Settings and the API (column `creatorProfileUrl` kept); admin creator page
+  links it per platform. Home page Get started/Create account → /sign-in;
+  sign-in page has no sign-up link (a new email/Google account is created
+  on first sign-in). Tested end to end in the browser.
+
 - **2026-11-23 — Commission × quantity.** A delivered order now earns the
   creator `commissionBirr × quantity` (was one commission per order
   regardless of items). Admin order page shows the multiplied amount (and
