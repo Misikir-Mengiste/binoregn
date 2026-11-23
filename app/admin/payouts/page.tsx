@@ -29,6 +29,7 @@ export default async function AdminPayoutsPage() {
         amountBirr: true,
         paidAt: true,
         payoutMethod: true,
+        payoutBankName: true,
         creator: {
           select: { email: true, name: true, creatorDisplayName: true },
         },
@@ -90,6 +91,7 @@ export default async function AdminPayoutsPage() {
           amountBirr: payout.amountBirr,
           paidAt: formatAddisDate(payout.paidAt),
           payoutMethod: payout.payoutMethod,
+          payoutBankName: payout.payoutBankName,
           commissionCount: payout._count.commissions,
           creatorName:
             payout.creator.creatorDisplayName ||

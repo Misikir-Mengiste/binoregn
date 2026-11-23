@@ -9,12 +9,7 @@ import {
   PayoutError,
 } from "@/lib/commission/payouts";
 import { birrText, notifyCreator } from "@/lib/notifications";
-
-const METHOD_LABELS: Record<string, string> = {
-  BANK_TRANSFER: "bank",
-  TELEBIRR: "Telebirr",
-  CBE_BIRR: "CBE Birr",
-};
+import { payoutProvider } from "@/lib/payout-display";
 
 // Live list of creators due in the current Friday payout.
 export async function GET() {
@@ -60,7 +55,7 @@ export async function POST(request: NextRequest) {
       await notifyCreator(creatorId, {
         type: "COMMISSION_PAID",
         title: `Payout sent: ${birrText(payout.amountBirr)}`,
-        body: `Paid for ${payout.commissionCount} delivered order${payout.commissionCount === 1 ? "" : "s"}${payout.payoutMethod ? ` to your ${METHOD_LABELS[payout.payoutMethod] ?? payout.payoutMethod} account` : ""}.`,
+        body: `Paid for ${payout.commissionCount} delivered order${payout.commissionCount === 1 ? "" : "s"}${payoutProvider(payout) ? ` to your ${payoutProvider(payout)} account` : ""}.`,
         href: "/creator/earnings",
       });
     } catch (error) {

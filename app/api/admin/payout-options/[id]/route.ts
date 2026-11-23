@@ -30,7 +30,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const updated = await prisma.payoutOption.update({
     where: { id },
-    data: { isActive: parsed.data.isActive },
+    data: {
+      ...(parsed.data.isActive !== undefined ? { isActive: parsed.data.isActive } : {}),
+      ...(parsed.data.logoUrl !== undefined ? { logoUrl: parsed.data.logoUrl } : {}),
+    },
   });
 
   return apiSuccess(updated);

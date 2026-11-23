@@ -52,6 +52,23 @@ change.
 
 - **2026-11-12 — Orders table + dashboard background.** Orders table: Delivery and Payment columns replaced by one Fulfillment column (order stage pill); product names cut to 24 chars with the full name as a tooltip; even cell padding (20px edges, 12px between) via row-level classes; table min width 760px; responsive title/stat sizes. Admin + creator dashboards: white content area, sidebars on a new light-grey token `--surface-50` (#f8f9fa) with a white bordered active item and white hover (user reference). Shared PageHeader title 22px on phones, 28px from sm. Verified no horizontal overflow on every admin and creator page at 375/768/1280.
 
+- **2026-11-23 — Payout methods as one logo list.** Creators pick one payout
+  option from the admin list (banks + wallets together) shown as logo tiles
+  (`components/payout-method-picker.tsx`) in sign-up step 3 and Settings:
+  wallets (Telebirr…) ask account holder name + phone (+251, leading 0 ok);
+  banks (CBE…) ask name + account number. Server check:
+  `lib/payout-choice.ts` (API body `payoutOptionId`, `payoutAccountName`,
+  `payoutAccountNumber`); saved as payoutBankName = option name for both
+  kinds, payoutMethod = TELEBIRR (wallet) / BANK_TRANSFER (bank). Displays
+  use `lib/payout-display.ts` `payoutProvider()` (admin commissions,
+  creator page, payouts list/history, Excel: Payout method / Type /
+  Account or phone, payout-sent message, earnings, change alert).
+  `PayoutOption.logoUrl` (migration `20261123120000_payout_option_logo`);
+  admin Settings: Upload/Change/Remove logo per method (rows now update in
+  place — also fixes Activate/Deactivate not redrawing). Built-in logos:
+  `public/images/payout-methods/telebirr.webp`, `cbe.webp`. Removed unused
+  `payout-method-form.tsx` and `lib/validations/payout.ts`. Tested end to end.
+
 - **2026-11-23 — Social media: profile link instead of @username.** The
   field is "Social media profile link" again (`lib/profile-link.ts`, replaces
   `lib/social-handle.ts`): a real http(s) link; "https://" added if typed

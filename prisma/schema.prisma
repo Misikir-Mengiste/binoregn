@@ -56,6 +56,9 @@ model PayoutOption {
   id        String               @id @default(cuid())
   category  PayoutOptionCategory
   name      String
+  // Logo shown on the creator payout picker: an uploaded /api/uploads/…
+  // file or a built-in /images/payout-methods/… image.
+  logoUrl   String?
   isActive  Boolean              @default(true)
   sortOrder Int                  @default(0)
   createdAt DateTime             @default(now())

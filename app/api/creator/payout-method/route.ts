@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireCreator } from "@/lib/auth-helpers";
-import { payoutMethodSchema } from "@/lib/validations/payout";
+import { payoutChoiceSchema, resolvePayoutChoice } from "@/lib/payout-choice";
 import { alertIfPayoutChanged } from "@/lib/payout-change-alert";
 
 const PAYOUT_SELECT = {
@@ -35,17 +35,14 @@ export async function PATCH(request: NextRequest) {
     return apiError("Invalid JSON body", 400);
   }
 
-  const parsed = payoutMethodSchema.safeParse(body);
+  const parsed = payoutChoiceSchema.safeParse(body);
   if (!parsed.success) {
     return apiError(parsed.error.issues[0]?.message ?? "Invalid input", 400);
   }
 
-  const { payoutMethod, payoutAccountName, payoutAccountNumber } =
-    parsed.data;
-  const payoutBankName =
-    parsed.data.payoutMethod === "BANK_TRANSFER"
-      ? parsed.data.payoutBankName
-      : null;
+  // One option from the admin list; number checked for that option.
+  const payout = await resolvePayoutChoice(parsed.data);
+  if (!payout.ok) return apiError(payout.error, 400);
 
   const before = await prisma.user.findUnique({
     where: { id: authed.id },
@@ -54,12 +51,7 @@ export async function PATCH(request: NextRequest) {
 
   const user = await prisma.user.update({
     where: { id: authed.id },
-    data: {
-      payoutMethod,
-      payoutAccountName,
-      payoutAccountNumber,
-      payoutBankName,
-    },
+    data: payout.fields,
     select: PAYOUT_SELECT,
   });
 

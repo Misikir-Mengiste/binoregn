@@ -1,6 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
+import {
+  PayoutMethodPicker,
+  choiceFromSaved,
+  describePayoutChoice,
+  payoutChoiceErrors,
+  payoutChoicePayload,
+  usePayoutOptions,
+  type PayoutOptionItem,
+  type SavedPayout,
+} from "@/components/payout-method-picker";
 import { useRouter } from "next/navigation";
 import { MoveRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +32,6 @@ import {
   sanitizeProfileLinkInput,
 } from "@/lib/profile-link";
 
-type PayoutOptionRow = { category: "BANK" | "WALLET"; name: string };
 
 type FieldErrors = Partial<Record<keyof FormState, string>>;
 
@@ -36,7 +45,7 @@ const PHONE_ERROR = "Enter your 9-digit phone number after +251, e.g. 911223344.
 const isPhone = (value: string) => /^[79]\d{8}$/.test(localPhone(value));
 
 // What's missing or wrong on one step (empty object = OK to continue).
-function stepErrors(step: number, form: FormState): FieldErrors {
+function stepErrors(step: number, form: FormState, payoutOptions: PayoutOptionItem[]): FieldErrors {
   const e: FieldErrors = {};
   if (step === 1) {
     if (form.fullName.trim().length < 2) e.fullName = "Enter your full name.";
@@ -53,15 +62,7 @@ function stepErrors(step: number, form: FormState): FieldErrors {
     if (!form.category) e.category = "Choose a content category.";
   }
   if (step === 3) {
-    if (form.payoutMethod === "TELEBIRR") {
-      if (!form.telebirrPhone.trim()) e.telebirrPhone = "Enter the phone number for payouts.";
-      else if (!isPhone(form.telebirrPhone)) e.telebirrPhone = PHONE_ERROR;
-    } else {
-      if (!form.bankName) e.bankName = "Choose your bank.";
-      if (form.bankAccountName.trim().length < 2) e.bankAccountName = "Enter the account holder name.";
-      if (!form.bankAccountNumber.trim()) e.bankAccountNumber = "Enter your account number.";
-      else if (!/^\d{4,30}$/.test(form.bankAccountNumber.trim())) e.bankAccountNumber = "Account number: numbers only.";
-    }
+    Object.assign(e, payoutChoiceErrors(form, payoutOptions));
   }
   return e;
 }
@@ -70,7 +71,7 @@ function stepErrors(step: number, form: FormState): FieldErrors {
 const STEP_FIELDS: Record<number, (keyof FormState)[]> = {
   1: ["fullName", "username", "phone"],
   2: ["displayName", "platform", "profileUrl", "category"],
-  3: ["telebirrPhone", "bankName", "bankAccountName", "bankAccountNumber"],
+  3: ["payoutOptionId", "payoutAccountName", "payoutAccountNumber"],
 };
 
 function FieldError({ id, message }: { id?: string; message?: string }) {
@@ -90,18 +91,20 @@ type FormState = {
   platform: string;
   profileUrl: string;
   category: string;
-  payoutMethod: "TELEBIRR" | "BANK_TRANSFER";
-  telebirrPhone: string;
-  bankName: string;
-  bankAccountName: string;
-  bankAccountNumber: string;
+  // Payout (components/payout-method-picker.tsx).
+  payoutOptionId: string;
+  payoutAccountName: string;
+  payoutAccountNumber: string;
 };
 
 export function CreatorOnboardingForm({
   initialValues,
+  savedPayout,
 }: {
   email: string;
   initialValues?: Partial<FormState>;
+  /** Payout details saved earlier (re-applying after a rejection). */
+  savedPayout?: SavedPayout;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -116,17 +119,22 @@ export function CreatorOnboardingForm({
     platform: initialValues?.platform ?? "",
     profileUrl: initialValues?.profileUrl ?? "",
     category: initialValues?.category ?? "",
-    payoutMethod: initialValues?.payoutMethod ?? "TELEBIRR",
-    telebirrPhone: initialValues?.telebirrPhone ?? "",
-    bankName: initialValues?.bankName ?? "",
-    bankAccountName: initialValues?.bankAccountName ?? "",
-    bankAccountNumber: initialValues?.bankAccountNumber ?? "",
+    payoutOptionId: "",
+    payoutAccountName: "",
+    payoutAccountNumber: "",
+  });
+  // Once the list loads, pre-select what this creator saved before.
+  const { options: payoutOptions, loaded: payoutLoaded } = usePayoutOptions((loadedOptions) => {
+    if (!savedPayout) return;
+    setForm((prev) =>
+      prev.payoutOptionId ? prev : { ...prev, ...choiceFromSaved(savedPayout, loadedOptions) },
+    );
   });
   // Only show the username error once they've typed or tried to continue.
   const [usernameTouched, setUsernameTouched] = useState(false);
   // Steps where Continue was pressed — their errors show (and update live).
   const [checkedSteps, setCheckedSteps] = useState<number[]>([]);
-  const errors = stepErrors(step, form);
+  const errors = stepErrors(step, form, payoutOptions);
   const showErrors = checkedSteps.includes(step);
   const err = (field: keyof FormState) =>
     field === "username"
@@ -148,7 +156,7 @@ export function CreatorOnboardingForm({
   // Continue: only move on when this step is complete; otherwise show
   // every problem on it and jump to the first one.
   function goNext() {
-    const current = stepErrors(step, form);
+    const current = stepErrors(step, form, payoutOptions);
     const firstBad = STEP_FIELDS[step]?.find((field) => current[field]);
     if (firstBad) {
       setCheckedSteps((done) => (done.includes(step) ? done : [...done, step]));
@@ -159,26 +167,6 @@ export function CreatorOnboardingForm({
     setStep(step + 1);
     window.scrollTo({ top: 0 });
   }
-  const [bankOptions, setBankOptions] = useState<string[]>([]);
-  const [walletOptions, setWalletOptions] = useState<string[]>([]);
-
-  useEffect(() => {
-    fetch("/api/creator/payout-options")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body: { data: PayoutOptionRow[] } | null) => {
-        if (!body) return;
-        setBankOptions(
-          body.data.filter((o) => o.category === "BANK").map((o) => o.name),
-        );
-        setWalletOptions(
-          body.data.filter((o) => o.category === "WALLET").map((o) => o.name),
-        );
-      })
-      .catch(() => {});
-  }, []);
-
-  const walletName = walletOptions[0] ?? "Telebirr";
-
   const progress = useMemo(
     () => ((step - 1) / 3) * 100,
     [step],
@@ -193,7 +181,7 @@ export function CreatorOnboardingForm({
     setError(null);
     // Re-check every step (in case something changed since).
     for (const s of [1, 2, 3]) {
-      const problems = stepErrors(s, form);
+      const problems = stepErrors(s, form, payoutOptions);
       const firstBad = STEP_FIELDS[s].find((field) => problems[field]);
       if (firstBad) {
         setCheckedSteps((done) => (done.includes(s) ? done : [...done, s]));
@@ -212,18 +200,7 @@ export function CreatorOnboardingForm({
         platform: form.platform,
         profileUrl: form.profileUrl.trim(),
         category: form.category.toUpperCase(),
-        payoutMethod: form.payoutMethod,
-        telebirrPhone:
-          form.payoutMethod === "TELEBIRR" ? `+251${localPhone(form.telebirrPhone)}` : undefined,
-        bankName: form.payoutMethod === "BANK_TRANSFER" ? form.bankName.trim() : undefined,
-        bankAccountName:
-          form.payoutMethod === "BANK_TRANSFER"
-            ? form.bankAccountName.trim()
-            : undefined,
-        bankAccountNumber:
-          form.payoutMethod === "BANK_TRANSFER"
-            ? form.bankAccountNumber.trim()
-            : undefined,
+        ...payoutChoicePayload(form, payoutOptions),
       };
 
       const response = await fetch("/api/creator/onboarding", {
@@ -460,124 +437,24 @@ export function CreatorOnboardingForm({
             <p className="mt-1 text-sm text-ink-600">We&apos;ll send your commissions here.</p>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <button
-              type="button"
-              onClick={() => updateField("payoutMethod", "TELEBIRR")}
-              className={cn(
-                "flex items-center justify-between rounded-[14px] border border-border px-4 py-4 text-left",
-                form.payoutMethod === "TELEBIRR" && "border-teal-600 bg-teal-100",
-              )}
-            >
-              <div>
-                <p className="text-sm font-semibold text-foreground">{walletName}</p>
-                <p className="text-xs text-ink-600">Fast mobile-money payouts</p>
-              </div>
-              <div
-                className={cn(
-                  "h-4 w-4 rounded-full border border-border",
-                  form.payoutMethod === "TELEBIRR" && "border-[5px] border-teal-600",
-                )}
-              />
-            </button>
-            <button
-              type="button"
-              onClick={() => updateField("payoutMethod", "BANK_TRANSFER")}
-              className={cn(
-                "flex items-center justify-between rounded-[14px] border border-border px-4 py-4 text-left",
-                form.payoutMethod === "BANK_TRANSFER" && "border-teal-600 bg-teal-100",
-              )}
-            >
-              <div>
-                <p className="text-sm font-semibold text-foreground">Bank transfer</p>
-                <p className="text-xs text-ink-600">Direct to your bank account</p>
-              </div>
-              <div
-                className={cn(
-                  "h-4 w-4 rounded-full border border-border",
-                  form.payoutMethod === "BANK_TRANSFER" && "border-[5px] border-teal-600",
-                )}
-              />
-            </button>
-          </div>
-
-          {form.payoutMethod === "TELEBIRR" ? (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="telebirrPhone">{walletName} phone number</Label>
-              <div className="flex items-center gap-2">
-                <div className="flex h-12 items-center rounded-[12px] border border-border bg-surface-100 px-3 text-sm font-semibold text-ink-600">
-                  +251
-                </div>
-                <Input
-                  id="telebirrPhone"
-                  type="tel"
-                  inputMode="numeric"
-                  className={cn("h-12 rounded-[12px]", invalid("telebirrPhone"))}
-                  value={form.telebirrPhone}
-                  onChange={(event) =>
-                    updateField(
-                      "telebirrPhone",
-                      event.target.value.replace(/\D/g, "").slice(0, 10),
-                    )
-                  }
-                  placeholder="911223344"
-                  aria-invalid={Boolean(err("telebirrPhone"))}
-                />
-              </div>
-              <FieldError message={err("telebirrPhone")} />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="bankName">Bank name</Label>
-                <select
-                  id="bankName"
-                  className={cn(
-                    "h-12 rounded-[12px] border border-border bg-card px-3 text-sm text-foreground",
-                    invalid("bankName"),
-                  )}
-                  value={form.bankName}
-                  onChange={(event) => updateField("bankName", event.target.value)}
-                  aria-invalid={Boolean(err("bankName"))}
-                >
-                  <option value="">Select your bank</option>
-                  {bankOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-                <FieldError message={err("bankName")} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="bankAccountName">Account holder name</Label>
-                <Input
-                  id="bankAccountName"
-                  className={cn("h-12 rounded-[12px]", invalid("bankAccountName"))}
-                  value={form.bankAccountName}
-                  onChange={(event) => updateField("bankAccountName", event.target.value)}
-                  placeholder="Abebe Bekele"
-                  aria-invalid={Boolean(err("bankAccountName"))}
-                />
-                <FieldError message={err("bankAccountName")} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="bankAccountNumber">Account number</Label>
-                <Input
-                  id="bankAccountNumber"
-                  inputMode="numeric"
-                  className={cn("h-12 rounded-[12px]", invalid("bankAccountNumber"))}
-                  value={form.bankAccountNumber}
-                  onChange={(event) =>
-                    updateField("bankAccountNumber", event.target.value.replace(/\s+/g, ""))
-                  }
-                  placeholder="1000123456789"
-                  aria-invalid={Boolean(err("bankAccountNumber"))}
-                />
-                <FieldError message={err("bankAccountNumber")} />
-              </div>
-            </div>
-          )}
+          <PayoutMethodPicker
+            options={payoutOptions}
+            loaded={payoutLoaded}
+            value={form}
+            onChange={(next) =>
+              setForm((prev) => ({
+                ...prev,
+                payoutOptionId: next.payoutOptionId,
+                payoutAccountName: next.payoutAccountName,
+                payoutAccountNumber: next.payoutAccountNumber,
+              }))
+            }
+            errors={{
+              payoutOptionId: err("payoutOptionId"),
+              payoutAccountName: err("payoutAccountName"),
+              payoutAccountNumber: err("payoutAccountNumber"),
+            }}
+          />
 
           <div className="flex items-center gap-3">
             <Button
@@ -675,36 +552,23 @@ export function CreatorOnboardingForm({
               <div className="flex items-center justify-between">
                 <span>Method</span>
                 <span className="font-semibold text-foreground">
-                  {form.payoutMethod === "TELEBIRR" ? walletName : "Bank transfer"}
+                  {describePayoutChoice(form, payoutOptions)?.provider ?? "—"}
                 </span>
               </div>
-              {form.payoutMethod === "TELEBIRR" ? (
-                <div className="mt-2 flex items-center justify-between">
-                  <span>Telebirr</span>
-                  <span className="font-semibold text-foreground">
-                    +251 {localPhone(form.telebirrPhone)}
-                  </span>
-                </div>
-              ) : (
-                <>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span>Bank</span>
-                    <span className="font-semibold text-foreground">{form.bankName}</span>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span>Account name</span>
-                    <span className="font-semibold text-foreground">
-                      {form.bankAccountName}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span>Account number</span>
-                    <span className="font-semibold text-foreground">
-                      {form.bankAccountNumber}
-                    </span>
-                  </div>
-                </>
-              )}
+              <div className="mt-2 flex items-center justify-between">
+                <span>Account name</span>
+                <span className="font-semibold text-foreground">{form.payoutAccountName}</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <span>
+                  {describePayoutChoice(form, payoutOptions)?.kind === "WALLET"
+                    ? "Phone number"
+                    : "Account number"}
+                </span>
+                <span className="font-semibold text-foreground">
+                  {describePayoutChoice(form, payoutOptions)?.number}
+                </span>
+              </div>
             </div>
           </div>
 

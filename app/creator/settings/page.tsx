@@ -64,14 +64,12 @@ export default async function CreatorSettingsPage() {
           category: user?.creatorCategory
             ? user.creatorCategory[0] + user.creatorCategory.slice(1).toLowerCase()
             : "Other",
-          payoutMethod: user?.payoutMethod === "BANK_TRANSFER" ? "BANK_TRANSFER" : "TELEBIRR",
-          telebirrPhone:
-            user?.payoutMethod === "TELEBIRR"
-              ? user?.payoutAccountNumber?.replace("+251", "") ?? ""
-              : "",
-          bankName: user?.payoutBankName ?? "Other",
-          bankAccountName: user?.payoutAccountName ?? "",
-          bankAccountNumber: user?.payoutAccountNumber ?? "",
+        }}
+        savedPayout={{
+          payoutMethod: user?.payoutMethod ?? null,
+          payoutBankName: user?.payoutBankName ?? null,
+          payoutAccountName: user?.payoutAccountName ?? null,
+          payoutAccountNumber: user?.payoutAccountNumber ?? null,
         }}
       />
     </div>

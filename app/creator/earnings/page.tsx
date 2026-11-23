@@ -10,12 +10,7 @@ import {
   upcomingPayoutCutoff,
 } from "@/lib/commission/payouts";
 import { EarningsHistory, type HistoryItem } from "./earnings-history";
-
-const PAYOUT_METHOD_LABELS: Record<string, string> = {
-  BANK_TRANSFER: "Bank transfer",
-  TELEBIRR: "Telebirr",
-  CBE_BIRR: "CBE ETB",
-};
+import { payoutProvider } from "@/lib/payout-display";
 
 // Palette for the "Earnings by product" bars.
 const BAR_COLORS = [
@@ -91,6 +86,7 @@ export default async function CreatorEarningsPage() {
         amountBirr: true,
         paidAt: true,
         payoutMethod: true,
+        payoutBankName: true,
         _count: { select: { commissions: true } },
       },
     }),
@@ -152,9 +148,8 @@ export default async function CreatorEarningsPage() {
     })),
     ...payouts.map((payout) => {
       const count = payout._count.commissions;
-      const method = payout.payoutMethod
-        ? ` · ${PAYOUT_METHOD_LABELS[payout.payoutMethod] ?? payout.payoutMethod}`
-        : "";
+      const provider = payoutProvider(payout);
+      const method = provider ? ` · ${provider}` : "";
       return {
         id: `p-${payout.id}`,
         kind: "PAYOUT" as const,
@@ -168,9 +163,7 @@ export default async function CreatorEarningsPage() {
     }),
   ].sort((a, b) => b.at.getTime() - a.at.getTime());
 
-  const payoutMethodLabel = user?.payoutMethod
-    ? PAYOUT_METHOD_LABELS[user.payoutMethod] ?? user.payoutMethod
-    : null;
+  const payoutMethodLabel = user ? payoutProvider(user) : null;
   const maskedAccount = user?.payoutAccountNumber
     ? `•••• •••• ${user.payoutAccountNumber.slice(-4)}`
     : "No payout account yet";

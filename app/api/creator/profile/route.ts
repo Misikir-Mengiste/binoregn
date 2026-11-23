@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireCreator } from "@/lib/auth-helpers";
 import { creatorProfileSchema } from "@/lib/validations/creator-onboarding";
-import { PayoutMethod } from "@/generated/prisma/client";
+import { resolvePayoutChoice } from "@/lib/payout-choice";
 import { alertIfPayoutChanged } from "@/lib/payout-change-alert";
 
 const PAYOUT_SELECT = {
@@ -38,27 +38,19 @@ export async function PATCH(request: NextRequest) {
     platform,
     profileUrl,
     category,
-    payoutMethod,
-    telebirrPhone,
-    bankName,
-    bankAccountName,
-    bankAccountNumber,
+    payoutOptionId,
+    payoutAccountName,
+    payoutAccountNumber,
   } = parsed.data;
 
-  const payoutFields =
-    payoutMethod === "TELEBIRR"
-      ? {
-          payoutMethod: PayoutMethod.TELEBIRR,
-          payoutAccountNumber: telebirrPhone ?? null,
-          payoutAccountName: fullName,
-          payoutBankName: null,
-        }
-      : {
-          payoutMethod: PayoutMethod.BANK_TRANSFER,
-          payoutAccountNumber: bankAccountNumber ?? null,
-          payoutAccountName: bankAccountName ?? null,
-          payoutBankName: bankName ?? null,
-        };
+  // One option from the admin list; number checked for that option.
+  const payout = await resolvePayoutChoice({
+    payoutOptionId,
+    payoutAccountName,
+    payoutAccountNumber,
+  });
+  if (!payout.ok) return apiError(payout.error, 400);
+  const payoutFields = payout.fields;
 
   const before = await prisma.user.findUnique({
     where: { id: authed.id },

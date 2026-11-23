@@ -1,5 +1,6 @@
 import { emailCreator } from "@/lib/notifications";
 import { CONTACT_EMAIL } from "@/lib/site";
+import { payoutProvider } from "@/lib/payout-display";
 
 type PayoutDetails = {
   payoutMethod: string | null;
@@ -25,10 +26,7 @@ export function alertIfPayoutChanged(
   // First-time setup (nothing saved before) isn't a "change".
   if (!changed || !before.payoutAccountNumber) return;
 
-  const method =
-    after.payoutMethod === "TELEBIRR"
-      ? "Telebirr"
-      : after.payoutBankName || "Bank transfer";
+  const method = payoutProvider(after) ?? "your new account";
   const last4 = (after.payoutAccountNumber ?? "").slice(-4);
 
   emailCreator(creatorId, {

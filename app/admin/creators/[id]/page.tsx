@@ -27,12 +27,7 @@ import { formatDate } from "@/lib/format";
 import { orderTotalBirr } from "@/lib/discount";
 import { requireAdminPage } from "@/lib/auth-helpers";
 import { profileLinkHref } from "@/lib/profile-link";
-
-const PAYOUT_METHOD_LABELS: Record<string, string> = {
-  BANK_TRANSFER: "Bank transfer",
-  TELEBIRR: "Telebirr",
-  CBE_BIRR: "CBE ETB",
-};
+import { isWalletMethod, payoutProvider } from "@/lib/payout-display";
 
 function birr(amount: number) {
   return `${amount.toLocaleString("en-US")} ETB`;
@@ -125,6 +120,7 @@ export default async function AdminCreatorDetailPage({
           amountBirr: true,
           paidAt: true,
           payoutMethod: true,
+          payoutBankName: true,
           _count: { select: { commissions: true } },
         },
       }),
@@ -376,19 +372,13 @@ export default async function AdminCreatorDetailPage({
           <div className="divide-y divide-border">
             <InfoRow
               label="Method"
-              value={
-                creator.payoutMethod
-                  ? PAYOUT_METHOD_LABELS[creator.payoutMethod] ??
-                    creator.payoutMethod
-                  : null
-              }
+              value={payoutProvider(creator)}
             />
             <InfoRow label="Account name" value={creator.payoutAccountName} />
             <InfoRow
-              label="Account number"
+              label={isWalletMethod(creator.payoutMethod) ? "Phone number" : "Account number"}
               value={creator.payoutAccountNumber}
             />
-            <InfoRow label="Bank" value={creator.payoutBankName} />
           </div>
         </Section>
       </div>
@@ -543,10 +533,7 @@ export default async function AdminCreatorDetailPage({
                     {birr(payout.amountBirr)}
                   </td>
                   <td className="px-5 py-3 text-ink-600">
-                    {payout.payoutMethod
-                      ? PAYOUT_METHOD_LABELS[payout.payoutMethod] ??
-                        payout.payoutMethod
-                      : "—"}
+                    {payoutProvider(payout) ?? "—"}
                   </td>
                   <td className="px-5 py-3 text-ink-600">
                     {payout._count.commissions.toLocaleString("en-US")}

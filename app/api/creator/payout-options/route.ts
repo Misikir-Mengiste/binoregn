@@ -9,7 +9,7 @@ export async function GET() {
   const options = await prisma.payoutOption.findMany({
     where: { isActive: true },
     orderBy: [{ category: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
-    select: { id: true, category: true, name: true },
+    select: { id: true, category: true, name: true, logoUrl: true },
   });
 
   return apiSuccess(options);

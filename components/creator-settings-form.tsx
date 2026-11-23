@@ -1,18 +1,27 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { CREATOR_CATEGORIES, CREATOR_PLATFORMS } from "@/lib/creator-options";
 import {
+  EMPTY_PAYOUT_CHOICE,
+  PayoutMethodPicker,
+  choiceFromSaved,
+  payoutChoiceErrors,
+  payoutChoicePayload,
+  usePayoutOptions,
+  type PayoutChoice,
+  type SavedPayout,
+} from "@/components/payout-method-picker";
+import {
   PROFILE_LINK_EXAMPLE,
   profileLinkError,
   sanitizeProfileLinkInput,
 } from "@/lib/profile-link";
 
-type PayoutOptionRow = { category: "BANK" | "WALLET"; name: string };
 
 type FormState = {
   fullName: string;
@@ -22,41 +31,27 @@ type FormState = {
   platform: string;
   profileUrl: string;
   category: string;
-  payoutMethod: "TELEBIRR" | "BANK_TRANSFER";
-  telebirrPhone: string;
-  bankName: string;
-  bankAccountName: string;
-  bankAccountNumber: string;
 };
 
 export function CreatorSettingsForm({
   initialValues,
+  savedPayout,
 }: {
   initialValues: FormState;
+  savedPayout: SavedPayout;
 }) {
   const [form, setForm] = useState<FormState>(initialValues);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const [bankOptions, setBankOptions] = useState<string[]>([]);
-  const [walletOptions, setWalletOptions] = useState<string[]>([]);
-
-  useEffect(() => {
-    fetch("/api/creator/payout-options")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body: { data: PayoutOptionRow[] } | null) => {
-        if (!body) return;
-        setBankOptions(
-          body.data.filter((o) => o.category === "BANK").map((o) => o.name),
-        );
-        setWalletOptions(
-          body.data.filter((o) => o.category === "WALLET").map((o) => o.name),
-        );
-      })
-      .catch(() => {});
-  }, []);
-
-  const walletName = walletOptions[0] ?? "Telebirr";
+  // Payout (components/payout-method-picker.tsx), pre-selected from what
+  // the creator saved once the option list loads.
+  const [payout, setPayout] = useState<PayoutChoice>(EMPTY_PAYOUT_CHOICE);
+  const [payoutChecked, setPayoutChecked] = useState(false);
+  const { options: payoutOptions, loaded: payoutLoaded } = usePayoutOptions((loadedOptions) =>
+    setPayout((prev) => (prev.payoutOptionId ? prev : choiceFromSaved(savedPayout, loadedOptions))),
+  );
+  const payoutErrors = payoutChecked ? payoutChoiceErrors(payout, payoutOptions) : {};
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -67,6 +62,15 @@ export function CreatorSettingsForm({
     event.preventDefault();
     setError(null);
     setSaved(false);
+    const problems = payoutChoiceErrors(payout, payoutOptions);
+    const firstBad = (["payoutOptionId", "payoutAccountName", "payoutAccountNumber"] as const).find(
+      (field) => problems[field],
+    );
+    if (firstBad) {
+      setPayoutChecked(true);
+      document.getElementById(firstBad)?.focus();
+      return;
+    }
     setLoading(true);
     try {
       const payload = {
@@ -77,18 +81,7 @@ export function CreatorSettingsForm({
         platform: form.platform,
         profileUrl: form.profileUrl.trim(),
         category: form.category.toUpperCase(),
-        payoutMethod: form.payoutMethod,
-        telebirrPhone:
-          form.payoutMethod === "TELEBIRR" ? `+251${form.telebirrPhone.trim()}` : undefined,
-        bankName: form.payoutMethod === "BANK_TRANSFER" ? form.bankName.trim() : undefined,
-        bankAccountName:
-          form.payoutMethod === "BANK_TRANSFER"
-            ? form.bankAccountName.trim()
-            : undefined,
-        bankAccountNumber:
-          form.payoutMethod === "BANK_TRANSFER"
-            ? form.bankAccountNumber.trim()
-            : undefined,
+        ...payoutChoicePayload(payout, payoutOptions),
       };
 
       const response = await fetch("/api/creator/profile", {
@@ -230,99 +223,17 @@ export function CreatorSettingsForm({
       <div className="rounded-[16px] border border-border bg-card p-5 shadow-card">
         <h2 className="text-[15px] font-semibold text-foreground">Payout</h2>
         <div className="mt-4 flex flex-col gap-4">
-          <div className="flex flex-col gap-3">
-            <button
-              type="button"
-              onClick={() => updateField("payoutMethod", "TELEBIRR")}
-              className={cn(
-                "flex items-center justify-between rounded-[12px] border border-border px-4 py-3 text-left",
-                form.payoutMethod === "TELEBIRR" && "border-teal-600 bg-teal-100",
-              )}
-            >
-              <div>
-                <p className="text-sm font-semibold text-foreground">{walletName}</p>
-                <p className="text-xs text-ink-600">Fast mobile-money payouts</p>
-              </div>
-              <div
-                className={cn(
-                  "h-4 w-4 rounded-full border border-border",
-                  form.payoutMethod === "TELEBIRR" && "border-[5px] border-teal-600",
-                )}
-              />
-            </button>
-            <button
-              type="button"
-              onClick={() => updateField("payoutMethod", "BANK_TRANSFER")}
-              className={cn(
-                "flex items-center justify-between rounded-[12px] border border-border px-4 py-3 text-left",
-                form.payoutMethod === "BANK_TRANSFER" && "border-teal-600 bg-teal-100",
-              )}
-            >
-              <div>
-                <p className="text-sm font-semibold text-foreground">Bank transfer</p>
-                <p className="text-xs text-ink-600">Direct to your bank account</p>
-              </div>
-              <div
-                className={cn(
-                  "h-4 w-4 rounded-full border border-border",
-                  form.payoutMethod === "BANK_TRANSFER" && "border-[5px] border-teal-600",
-                )}
-              />
-            </button>
-          </div>
-
-          {form.payoutMethod === "TELEBIRR" ? (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="telebirrPhone">{walletName} phone number</Label>
-              <div className="flex items-center gap-2">
-                <div className="flex h-11 items-center rounded-[10px] border border-border bg-surface-100 px-3 text-sm font-semibold text-ink-600">
-                  +251
-                </div>
-                <Input
-                  id="telebirrPhone"
-                  className="h-11 rounded-[10px]"
-                  value={form.telebirrPhone}
-                  onChange={(event) => updateField("telebirrPhone", event.target.value)}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5 sm:col-span-2">
-                <Label htmlFor="bankName">Bank name</Label>
-                <select
-                  id="bankName"
-                  className="h-11 rounded-[10px] border border-border bg-card px-3 text-sm text-foreground"
-                  value={form.bankName}
-                  onChange={(event) => updateField("bankName", event.target.value)}
-                >
-                  {bankOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="bankAccountName">Account holder name</Label>
-                <Input
-                  id="bankAccountName"
-                  className="h-11 rounded-[10px]"
-                  value={form.bankAccountName}
-                  onChange={(event) => updateField("bankAccountName", event.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="bankAccountNumber">Account number</Label>
-                <Input
-                  id="bankAccountNumber"
-                  className="h-11 rounded-[10px]"
-                  value={form.bankAccountNumber}
-                  onChange={(event) => updateField("bankAccountNumber", event.target.value)}
-                />
-              </div>
-            </div>
-          )}
+          <PayoutMethodPicker
+            options={payoutOptions}
+            loaded={payoutLoaded}
+            value={payout}
+            onChange={(next) => {
+              setPayout(next);
+              setSaved(false);
+            }}
+            errors={payoutErrors}
+            inputClassName="h-11 rounded-[10px]"
+          />
         </div>
       </div>
 

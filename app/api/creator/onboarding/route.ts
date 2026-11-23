@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { requireCreator } from "@/lib/auth-helpers";
 import { creatorOnboardingSchema } from "@/lib/validations/creator-onboarding";
-import { CreatorProfileStatus, PayoutMethod } from "@/generated/prisma/client";
+import { CreatorProfileStatus } from "@/generated/prisma/client";
+import { resolvePayoutChoice } from "@/lib/payout-choice";
 
 export async function POST(request: NextRequest) {
   const authed = await requireCreator();
@@ -31,11 +32,9 @@ export async function POST(request: NextRequest) {
     platform,
     profileUrl,
     category,
-    payoutMethod,
-    telebirrPhone,
-    bankName,
-    bankAccountName,
-    bankAccountNumber,
+    payoutOptionId,
+    payoutAccountName,
+    payoutAccountNumber,
   } = parsed.data;
 
   const existingUsername = await prisma.user.findUnique({
@@ -46,20 +45,14 @@ export async function POST(request: NextRequest) {
     return apiError("That username is already taken", 409);
   }
 
-  const payoutFields =
-    payoutMethod === "TELEBIRR"
-      ? {
-          payoutMethod: PayoutMethod.TELEBIRR,
-          payoutAccountNumber: telebirrPhone ?? null,
-          payoutAccountName: fullName,
-          payoutBankName: null,
-        }
-      : {
-          payoutMethod: PayoutMethod.BANK_TRANSFER,
-          payoutAccountNumber: bankAccountNumber ?? null,
-          payoutAccountName: bankAccountName ?? null,
-          payoutBankName: bankName ?? null,
-        };
+  // One option from the admin list; number checked for that option.
+  const payout = await resolvePayoutChoice({
+    payoutOptionId,
+    payoutAccountName,
+    payoutAccountNumber,
+  });
+  if (!payout.ok) return apiError(payout.error, 400);
+  const payoutFields = payout.fields;
 
   const user = await prisma.user.update({
     where: { id: authed.id },

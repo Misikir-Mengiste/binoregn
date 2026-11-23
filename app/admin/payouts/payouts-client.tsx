@@ -5,18 +5,14 @@ import { useRouter } from "next/navigation";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { DuePayout } from "@/lib/commission/payouts";
-
-const METHOD_LABELS: Record<string, string> = {
-  BANK_TRANSFER: "Bank transfer",
-  TELEBIRR: "Telebirr",
-  CBE_BIRR: "CBE Birr",
-};
+import { payoutProvider } from "@/lib/payout-display";
 
 type RecentPayout = {
   id: string;
   amountBirr: number;
   paidAt: string;
   payoutMethod: string | null;
+  payoutBankName: string | null;
   commissionCount: number;
   creatorName: string;
 };
@@ -25,12 +21,9 @@ function PayoutAccount({ row }: { row: DuePayout }) {
   if (!row.payoutMethod || !row.payoutAccountNumber) {
     return <span className="text-xs font-medium text-orange-500">No payout details</span>;
   }
-  const label = METHOD_LABELS[row.payoutMethod] ?? row.payoutMethod;
   return (
     <div className="text-xs text-ink-600">
-      <p className="font-medium text-foreground">
-        {row.payoutBankName ? `${label} (${row.payoutBankName})` : label}
-      </p>
+      <p className="font-medium text-foreground">{payoutProvider(row)}</p>
       <p>
         {row.payoutAccountNumber}
         {row.payoutAccountName ? ` · ${row.payoutAccountName}` : ""}
@@ -213,9 +206,7 @@ export function PayoutsClient({
                     {payout.creatorName}
                   </td>
                   <td className="px-5 py-3 text-ink-600">
-                    {payout.payoutMethod
-                      ? METHOD_LABELS[payout.payoutMethod] ?? payout.payoutMethod
-                      : "—"}
+                    {payoutProvider(payout) ?? "—"}
                   </td>
                   <td className="px-5 py-3 text-ink-600">
                     {payout.commissionCount.toLocaleString("en-US")}

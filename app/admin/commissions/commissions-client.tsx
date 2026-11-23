@@ -10,6 +10,7 @@ import { DeleteButton } from "@/components/delete-button";
 import { orderNumber } from "@/lib/order-number";
 import { shortProductName } from "@/lib/short-name";
 import { formatDate } from "@/lib/format";
+import { payoutProvider } from "@/lib/payout-display";
 
 type CommissionRow = {
   id: string;
@@ -28,24 +29,13 @@ type CommissionRow = {
   order: { id: string; product: { name: string } };
 };
 
-const PAYOUT_METHOD_LABEL: Record<string, string> = {
-  BANK_TRANSFER: "Bank transfer",
-  TELEBIRR: "Telebirr",
-  CBE_BIRR: "CBE ETB",
-};
-
 function PayoutInfo({ creator }: { creator: CommissionRow["creator"] }) {
   if (!creator.payoutMethod || !creator.payoutAccountNumber) {
     return <span className="text-xs text-ink-400">Not set</span>;
   }
-  const label = PAYOUT_METHOD_LABEL[creator.payoutMethod] ?? creator.payoutMethod;
   return (
     <div>
-      <p className="font-semibold text-foreground">
-        {creator.payoutMethod === "BANK_TRANSFER" && creator.payoutBankName
-          ? `${label} (${creator.payoutBankName})`
-          : label}
-      </p>
+      <p className="font-semibold text-foreground">{payoutProvider(creator)}</p>
       <p className="text-xs text-ink-400">
         {creator.payoutAccountNumber}
         {creator.payoutAccountName ? ` (${creator.payoutAccountName})` : ""}

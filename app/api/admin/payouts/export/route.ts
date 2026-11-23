@@ -7,14 +7,9 @@ import {
   payoutDay,
   PAYOUT_MIN_BIRR,
 } from "@/lib/commission/payouts";
+import { isWalletMethod, payoutProvider } from "@/lib/payout-display";
 
 export const runtime = "nodejs";
-
-const METHOD_LABELS: Record<string, string> = {
-  BANK_TRANSFER: "Bank transfer",
-  TELEBIRR: "Telebirr",
-  CBE_BIRR: "CBE Birr",
-};
 
 // The Friday payout list as an Excel file (admin downloads it from the
 // dashboard — Telegram never sends it). Same live data as the Payouts
@@ -40,9 +35,9 @@ export async function GET() {
     { header: "Email", key: "email", width: 30 },
     { header: "Phone", key: "phone", width: 16 },
     { header: "Payout method", key: "method", width: 16 },
-    { header: "Bank / provider", key: "bank", width: 22 },
+    { header: "Type", key: "bank", width: 16 },
     { header: "Account name", key: "accountName", width: 24 },
-    { header: "Account number", key: "accountNumber", width: 22 },
+    { header: "Account / phone number", key: "accountNumber", width: 24 },
     { header: "Commissions", key: "count", width: 13 },
     { header: "Amount (Birr)", key: "amount", width: 15 },
   ];
@@ -54,8 +49,8 @@ export async function GET() {
       name: row.creatorName,
       email: row.creatorEmail,
       phone: row.creatorPhone ?? "",
-      method: row.payoutMethod ? METHOD_LABELS[row.payoutMethod] ?? row.payoutMethod : "Not set",
-      bank: row.payoutBankName ?? "",
+      method: payoutProvider(row) ?? "Not set",
+      bank: row.payoutMethod ? (isWalletMethod(row.payoutMethod) ? "Mobile wallet" : "Bank account") : "",
       accountName: row.payoutAccountName ?? "",
       // Text, so Excel keeps leading zeros and long numbers intact.
       accountNumber: row.payoutAccountNumber ?? "",
